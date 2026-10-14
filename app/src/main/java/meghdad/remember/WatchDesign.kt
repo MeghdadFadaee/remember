@@ -88,7 +88,7 @@ object WatchDesign {
     }
 }
 
-enum class WatchIcon { RECORD, MOMENTS, STORAGE, LIMIT, BACKUP, SERVER, TRANSFERS, REMOTE, AUTOMATIC, ADVANCED, MENU, PLAY }
+enum class WatchIcon { RECORD, MOMENTS, STORAGE, LIMIT, BACKUP, SERVER, TRANSFERS, REMOTE, AUTOMATIC, ADVANCED, MENU, PLAY, PAUSE, MARK }
 
 /** Each destination has an identifiable silhouette, without fonts or bitmap assets. */
 class WatchGlyph(private val icon: WatchIcon, private val tint: Int, private val orb: Boolean = false) : Drawable() {
@@ -123,6 +123,8 @@ class WatchGlyph(private val icon: WatchIcon, private val tint: Int, private val
             WatchIcon.ADVANCED -> { for (i in 0..2) { val y = 12f + i * 12; line(7f, y, 41f, y); box(if (i == 1) 26f else 12f, y - 4, if (i == 1) 32f else 18f, y + 4, 2f) } }
             WatchIcon.MENU -> { paint.style = Paint.Style.FILL; for (x in listOf(15f, 33f)) for (y in listOf(15f, 33f)) canvas.drawCircle(x, y, 5f, paint) }
             WatchIcon.PLAY -> { val path = Path().apply { moveTo(17f, 9f); lineTo(38f, 24f); lineTo(17f, 39f); close() }; canvas.drawPath(path, paint) }
+            WatchIcon.PAUSE -> { line(18f, 12f, 18f, 36f); line(30f, 12f, 30f, 36f) }
+            WatchIcon.MARK -> { val path = Path().apply { moveTo(14f, 9f); lineTo(34f, 9f); lineTo(34f, 39f); lineTo(24f, 32f); lineTo(14f, 39f); close() }; canvas.drawPath(path, paint) }
         }
         canvas.restore()
     }

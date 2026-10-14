@@ -24,7 +24,7 @@ class RecordingTileService : TileService() {
         actions.consume(requestParams.currentState.lastClickableId, before.clipId)?.let { action ->
             before.clipId?.let { RecordingService.tileCommand(it, action) }
         }
-        return immediate(RecordingTilePresentation.tile(this, RecordingService.tileState(), actions))
+        return immediate(RecordingTilePresentation.tile(this, RecordingService.tileState(), actions, scope = requestParams.scope))
     }
 
     public override fun onTileResourcesRequest(requestParams: RequestBuilders.ResourcesRequest): ListenableFuture<ResourceBuilders.Resources> =

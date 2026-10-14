@@ -1,4 +1,7 @@
 <resources>
+    <string name="recorder_start">Start recording</string>
+    <string name="recorder_recording_part">● RECORDING · %1$d</string>
+    <string name="recorder_moment_marked">Moment marked</string>
     <string name="menu">Menu</string>
     <string name="open_menu">Open all sections</string>
     <string name="recorder">Recorder</string>

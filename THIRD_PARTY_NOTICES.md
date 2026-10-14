@@ -18,7 +18,7 @@ The app includes [mwiede/JSch 2.28.8](https://github.com/mwiede/jsch/tree/jsch-2
 
 ## AndroidX Tiles and concurrency
 
-The recording tile uses AndroidX Wear Tiles 1.6.2, ProtoLayout/ProtoLayout Expression 1.4.2, and Concurrent Futures 1.3.0, distributed under the Apache License, Version 2.0. The transitive Guava `listenablefuture` API is also Apache-2.0 licensed. A copy of the license is retained in [licenses/Apache-2.0.txt](licenses/Apache-2.0.txt) and bundled in the app's license assets. These libraries and their notices retain their upstream licenses; they are not relicensed under MIT. The tile renderer dependency is used only in device tests.
+The recording tile uses AndroidX Wear Tiles 1.6.2, ProtoLayout/ProtoLayout Expression 1.4.2, Concurrent Futures 1.3.0, and Annotation Experimental 1.6.0 (API opt-in markers for native tile transitions), distributed under the Apache License, Version 2.0. The transitive Guava `listenablefuture` API is also Apache-2.0 licensed. A copy of the license is retained in [licenses/Apache-2.0.txt](licenses/Apache-2.0.txt) and bundled in the app's license assets. These libraries and their notices retain their upstream licenses; they are not relicensed under MIT. The tile renderer dependency is used only in device tests.
 
 ## Resolved dependencies and platform resources
 

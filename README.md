@@ -8,6 +8,7 @@ Screenshots from a Wear OS round-screen emulator:
 
 <p>
   <img src="docs/home.png" width="240" alt="Remember home screen with a floating minute number and recording controls" />
+  <img src="docs/recording.png" width="240" alt="Recording page with a fixed Save button and floating Pause and Mark icons" />
   <img src="docs/home-menu-visible.png" width="240" alt="Home with the bottom-center menu icon revealed by touch" />
   <img src="docs/menu.png" width="240" alt="Single menu with a grid of icons for every section" />
   <img src="docs/recording-limit.png" width="240" alt="Recording limit dial showing unlimited recording" />
@@ -99,24 +100,26 @@ The pairing and connection ports are different. Read each from the watch's Wirel
 ## Using Remember
 
 - **Record:** tap Record and allow microphone access. Allow notifications to make the recording notification and its Save action easy to reach.
-- **Pause / Resume:** paused time is excluded from captured duration and minute limits.
+- **Pause / Resume:** use the small floating pause/play icon below the main button. Paused time is excluded from captured duration and minute limits.
 - **Mark:** add a timestamp bookmark using the button or by tapping the right edge during capture.
 - **Save:** finish and save the current clip.
 - **Moments:** browse and play recordings, rename them, or delete them after confirmation. Tap a bookmark to jump to it. The right edge also seeks during playback; the native slider is available as an alternative.
 - Swipe vertically or use rotary input to reach controls below the screen.
 
+The app keeps **Record / Save** in one fixed position. Small **Pause / Resume** and **Mark** icons appear below it during capture, with 48 dp tap areas around 36 dp circles. Labels fade and the icons gently rise into place without rebuilding the screen or restarting the floating numeral. These short transitions respect animation and battery-saver preferences.
+
 Audio is stored as mono AAC in M4A files at 44.1 kHz / 128 kbps, approximately 1 MB per minute. The large numeral shows whole minutes in the current recording or playback, and total saved minutes on the home screen. Floating motion stops while capture is paused, the app is in the background, animations are disabled, or battery saver is active.
 
 ## Current recording tile
 
-Add **Remember → Current recording** from the watch's **Add tiles** screen (swipe through your tiles from the watch face). The tile mirrors the app’s home/recording screen: original rounded minute artwork behind translucent controls, an olive dial with a half-circle seconds sweep, and **Pause / Resume** and **Mark** above **Save**. The left edge indicates capturing/paused state and the right edge lights up for bookmarks (up to twelve visible marks). The status has spoken part and full bookmark counts. These controls work directly in the tile while the recording service continues in the background. It has no library, backup, or settings controls.
+Add **Remember → Current recording** from the watch's **Add tiles** screen (swipe through your tiles from the watch face). The tile mirrors the app’s home/recording screen: original rounded minute artwork behind translucent controls, an olive dial with a half-circle seconds sweep, and one fixed main button that changes from **Record** to **Save**. During capture, small floating **Pause / Resume** and **Mark** icons sit below it, each with a 48 dp tap area. The label fades between states and the floating controls fade and gently rise into place; the page and main button stay still. These short, system-rendered transitions are omitted when animations are disabled or battery saver is active. Older tile renderers use the same layout without transitions. The left edge indicates capturing/paused state and the right edge lights up for bookmarks (up to twelve visible marks). The status has spoken part and full bookmark counts. These controls work directly in the tile while the recording service continues in the background. It has no library, backup, or settings controls.
 
-With no active recording, the tile shows the **REMEMBER** heading, a zero numeral, and **Record**. Tap **Record** to begin and stay on the tile. A brief transparent activity handles Android’s foreground microphone requirements; it asks for microphone access only when needed and returns to the tile after capture starts. Denying access leaves recording stopped. Ordinary app launches do not start capture. Paused time is excluded. Saving or reaching a stop limit returns the tile to idle; automatic splitting switches it to the new part at zero. Delayed commands for a previous clip are ignored.
+With no active recording, the tile shows the **REMEMBER** heading, a zero numeral, and **Record**. Tap **Record** to begin and stay on the tile. A brief transparent activity handles Android’s foreground microphone requirements; it asks for microphone access only when needed and returns to the tile after capture starts. Denying access leaves recording stopped. Wear OS controls this permission/start handoff; older tile hosts may briefly show their system launch transition. Ordinary app launches do not start capture. Paused time is excluded. Saving or reaching a stop limit returns the tile to idle; automatic splitting switches it to the new part at zero. Delayed commands for a previous clip are ignored.
 
 The system renderer advances the seconds sweep and spoken time once per second on hosts supporting dynamic expressions (Wear OS 4+); older hosts show a seconds snapshot. Original minute glyphs advance through a one-hour system timeline, with a live numeric fallback if a host retains the tile longer. Tap the numeral to refresh it. State changes request an update, and the tile requests a periodic refresh, but Wear OS controls delivery timing. The app does not poll or run another recording service for the tile. Physical Galaxy Watch tile validation is pending.
 
 <p>
-  <img src="docs/tile-recording.png" width="240" alt="Current recording tile matching the app home, with a large rounded minute numeral behind Pause, Mark, and Save" />
+  <img src="docs/tile-recording.png" width="240" alt="Current recording tile matching the app home, with a large rounded minute numeral behind a fixed Save button and small floating Pause and Mark icons" />
   <img src="docs/tile-paused.png" width="240" alt="Paused recording tile with Resume, Mark, and Save" />
   <img src="docs/tile-idle.png" width="240" alt="Idle tile with a Record button" />
 </p>

@@ -34,8 +34,8 @@ class MainActivity : Activity() {
     private lateinit var dial: SpatialDialDrawable
     private var downX = 0f
     private var downY = 0f
-    private var status: TextView? = null
-    private var pause: Button? = null
+    private var recorderControls: RecorderControlsView? = null
+    private var savedHomeDuration = 0L
     private var play: Button? = null
     private var seek: SeekBar? = null
     private var active = false
@@ -52,12 +52,12 @@ class MainActivity : Activity() {
     private val ticker = object : Runnable {
         override fun run() {
             val now = RecordingService.activeId != null
-            if (now != active) { active = now; if (screen == "home") render() }
-            if (now && screen == "home") {
-                updateDial(RecordingService.elapsed)
-                status?.text = if (RecordingService.paused) "PAUSED" else if (RecordingService.part > 1) "●  RECORDING · ${RecordingService.part}" else "●  RECORDING"
-                pause?.text = if (RecordingService.paused) "Resume" else "Pause"
+            val changed = now != active
+            if (changed) {
+                active = now
+                if (!now && screen == "home") savedHomeDuration = store.list().sumOf { it.duration }
             }
+            if (screen == "home" && (now || changed)) updateHomeControls()
             player?.let { p ->
                 runCatching {
                     updateDial(p.currentPosition.toLong())
@@ -91,7 +91,7 @@ class MainActivity : Activity() {
         minutes?.setFloating(motionAllowed && !RecordingService.paused && minutes?.visibility == View.VISIBLE)
         handler.post(ticker)
     }
-    override fun onPause() { foreground = false; floatingMenu?.pause(); handler.removeCallbacks(ticker); minutes?.setFloating(false); player?.pause(); super.onPause() }
+    override fun onPause() { recorderControls?.finishTransitions(); foreground = false; floatingMenu?.pause(); handler.removeCallbacks(ticker); minutes?.setFloating(false); player?.pause(); super.onPause() }
     override fun onDestroy() { floatingMenu?.dispose(); releasePlayer(); storageWorker.shutdown(); super.onDestroy() }
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         val handled = super.dispatchTouchEvent(event)
@@ -139,7 +139,8 @@ class MainActivity : Activity() {
         val menuWasVisible = floatingMenu?.button?.visibility == View.VISIBLE
         floatingMenu?.dispose(); floatingMenu = null
         minutes?.setFloating(false)
-        minutes = null; status = null; pause = null; play = null; seek = null; limitPicker = null
+        recorderControls?.finishTransitions(); recorderControls = null
+        minutes = null; play = null; seek = null; limitPicker = null
         storageRequest++; storageChart = null; storageAvailable = null; storageApp = null
         dial = SpatialDialDrawable()
         val layers = FrameLayout(this).apply { background = dial }
@@ -148,7 +149,8 @@ class MainActivity : Activity() {
         body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
             val round = resources.configuration.isScreenRound
-            setPadding(dp(if (round) 30 else 28), dp(if (screen == "home") 16 else 14), dp(if (round) 30 else 28), dp(24))
+            val horizontal = if (screen == "home") 22 else if (round) 30 else 28
+            setPadding(dp(horizontal), dp(if (screen == "home") 16 else 14), dp(horizontal), dp(if (screen == "home") 20 else 24))
         }
         scroll.addView(body)
         layers.addView(scroll, FrameLayout.LayoutParams(-1, -1))
@@ -200,7 +202,6 @@ class MainActivity : Activity() {
             screen == "limits" -> limits()
             screen == "limit_minutes" -> limitMinutes()
             screen == "limit_action" -> limitAction()
-            active && screen == "home" -> recording()
             screen == "library" -> library()
             screen == "detail" -> detail()
             else -> home()
@@ -240,31 +241,22 @@ class MainActivity : Activity() {
         scroll.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
     }
     private fun home() {
-        val clips = store.list()
-        val total = clips.sumOf { it.duration }
-        text("REMEMBER", 10f).apply { letterSpacing = .2f }
-        counter(total, true)
+        savedHomeDuration = store.list().sumOf { it.duration }
+        recorderControls = RecorderControlsView(this,
+            onPrimary = { showingRecording -> if (showingRecording) command(RecordingService.SAVE) else startRecording() },
+            onPause = { command(RecordingService.PAUSE) },
+            onMark = {
+                command(RecordingService.MARK)
+                Toast.makeText(this, R.string.recorder_moment_marked, Toast.LENGTH_SHORT).show()
+            }).also { body.addView(it, LinearLayout.LayoutParams(-1, -2)) }
         dial.freeStorage = (filesDir.usableSpace.toDouble() / filesDir.totalSpace.coerceAtLeast(1)).toFloat()
-        updateDial(total)
-        // Saved total has no running seconds; the sweep starts when capture starts.
-        dial.elapsed = 0
-        button("●  Record", mint) { startRecording() }.contentDescription = "Start recording"
+        updateHomeControls(animate = false)
     }
-    private fun recording() {
-        status = text(if (RecordingService.paused) "PAUSED" else "●  RECORDING", 10f, mint)
-        counter(RecordingService.elapsed)
-        updateDial(RecordingService.elapsed)
-        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        pause = button(if (RecordingService.paused) "Resume" else "Pause") { command(RecordingService.PAUSE) }
-        val mark = button("Mark") {
-            command(RecordingService.MARK)
-            Toast.makeText(this, "Moment marked", Toast.LENGTH_SHORT).show()
-        }
-        body.removeView(pause); body.removeView(mark)
-        row.addView(pause, LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginEnd = dp(3) })
-        row.addView(mark, LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginStart = dp(3) })
-        body.addView(row)
-        button("■  Save", mint) { command(RecordingService.SAVE) }
+    private fun updateHomeControls(animate: Boolean = true) {
+        updateDial(if (active) RecordingService.elapsed else savedHomeDuration)
+        if (!active) dial.elapsed = 0
+        recorderControls?.bind(active, RecordingService.paused, RecordingService.part,
+            animate && foreground && motionAllowed)
     }
     private fun menu() {
         updateDial(0)

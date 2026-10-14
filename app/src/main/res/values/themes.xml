@@ -8,6 +8,7 @@
         <item name="android:windowNoTitle">true</item>
     </style>
     <style name="Theme.Remember.TileStart" parent="Theme.Remember">
+        <item name="android:windowAnimationStyle">@null</item>
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowDisablePreview">true</item>

@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.widget.Toast
+import android.widget.FrameLayout
 
 /** A visible, tile-host-only entry point for microphone permission and foreground capture. */
 class TileRecordingActivity : Activity() {
@@ -30,9 +31,31 @@ class TileRecordingActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // This permission/foreground handoff must not run a full-screen activity transition.
+        setContentView(FrameLayout(this).apply { setBackgroundColor(android.graphics.Color.TRANSPARENT) })
+        suppressWindowTransition()
         permissionPending = savedInstanceState?.getBoolean("permissionPending") ?: false
         dispatched = savedInstanceState?.getBoolean("dispatched") ?: false
         deadline = savedInstanceState?.getLong("deadline") ?: 0
+    }
+
+    private fun suppressWindowTransition() {
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, 0, 0)
+            overrideActivityTransition(OVERRIDE_TRANSITION_CLOSE, 0, 0)
+        } else {
+            @Suppress("DEPRECATION")
+            overridePendingTransition(0, 0)
+        }
+    }
+
+    override fun finish() {
+        suppressWindowTransition()
+        super.finish()
+        if (android.os.Build.VERSION.SDK_INT < 34) {
+            @Suppress("DEPRECATION")
+            overridePendingTransition(0, 0)
+        }
     }
 
     override fun onResume() {

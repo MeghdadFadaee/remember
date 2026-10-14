@@ -23,7 +23,8 @@ class RecordingTileLayoutTest {
         for (size in listOf(192, 227)) {
             val base = instrumentation.targetContext
             val context = base.createConfigurationContext(Configuration(base.resources.configuration).apply { screenWidthDp = size })
-            for (state in listOf(RecordingTileState(), RecordingTileState("clip", true, 7_205_000, 12, 3), RecordingTileState("clip", true, 86_400_000, 0, 1))) {
+            var primaryBounds: android.graphics.Rect? = null
+            for (state in listOf(RecordingTileState(), RecordingTileState("clip", false, 59_000, 0, 1), RecordingTileState("clip", true, 7_205_000, 12, 3), RecordingTileState("clip", true, 86_400_000, 0, 1))) {
                 lateinit var parent: FrameLayout
                 lateinit var future: ListenableFuture<View>
                 instrumentation.runOnMainSync {
@@ -31,7 +32,7 @@ class RecordingTileLayoutTest {
                     // Renderer resources live in the test APK, while the layout uses app strings.
                     val renderer = TileRenderer(instrumentation.context, context.mainExecutor) { }
                     val layout = LayoutElementBuilders.Layout.Builder()
-                        .setRoot(RecordingTileLayout(context, RecordingTileActions()).build(state)).build()
+                        .setRoot(RecordingTileLayout(context, RecordingTileActions(), animateTransitions = false).build(state)).build()
                     future = renderer.inflateAsync(layout, RecordingTileArtwork.resources, parent)
                 }
                 val view = future.get(10, TimeUnit.SECONDS)
@@ -50,6 +51,10 @@ class RecordingTileLayoutTest {
                         val minimum = (48 * context.resources.displayMetrics.density).toInt()
                         assertTrue("Tap target too small", bounds.width() >= minimum && bounds.height() >= minimum)
                         assertFalse("Missing spoken description", control.contentDescription.isNullOrEmpty())
+                        if (control.contentDescription.toString() in listOf("Record", "Save")) {
+                            primaryBounds?.let { assertEquals("Record and Save must occupy the same fixed position", it, bounds) }
+                            primaryBounds = android.graphics.Rect(bounds)
+                        }
                         if (control.contentDescription.toString() in listOf("Resume", "Mark", "Save", "Record")) {
                             // Buttons are capsules: both rounded ends must fit inside the watch circle.
                             val radius = bounds.height() / 2.0
@@ -60,11 +65,17 @@ class RecordingTileLayoutTest {
                         }
                     }
                     val texts = all.filterIsInstance<TextView>()
-                    assertTrue(controls.any { it.contentDescription?.toString()?.contains(state.time) == true })
+                    // The live host clock can cross a second/minute boundary while inflating.
+                    val descriptions = controls.map { it.contentDescription?.toString().orEmpty() }
+                    assertTrue("Missing spoken timer: $descriptions", descriptions.any {
+                        if (state.active && !state.paused) Regex("[0-9]+:[0-9]{2}").containsMatchIn(it)
+                        else it.contains(state.time)
+                    })
                     val images = all.filterIsInstance<ImageView>()
-                    assertEquals(1 + (state.elapsedMillis / 60_000).toString().length, images.size)
+                    assertEquals(1 + (state.elapsedMillis / 60_000).toString().length + if (state.active) 2 else 0, images.size)
                     assertTrue("Original numeral artwork must render", images.all { it.drawable != null })
                     assertFalse("No caption or duplicate digital timer below the numeral", texts.any { it.text.toString().contains(":") })
+                    assertFalse("Secondary controls must be icon-only", texts.any { it.text.toString() in listOf("Pause", "Resume", "Mark") })
                     texts.forEach { text ->
                         assertTrue("Text is clipped: ${text.text}", text.layout != null && (0 until text.layout.lineCount).all { text.layout.getEllipsisCount(it) == 0 })
                     }

@@ -6,7 +6,7 @@ import java.io.ByteArrayOutputStream
 
 /** Small, process-cached resources drawn from the same original paths as MinuteCounterView. */
 internal object RecordingTileArtwork {
-    const val VERSION = "recording-spatial-1"
+    const val VERSION = "recording-spatial-2"
     val resources: ResourceBuilders.Resources by lazy {
         ResourceBuilders.Resources.Builder().setVersion(VERSION).apply {
             for (digit in 0..9) addIdToImageMapping("digit-$digit", image(160, 240) { canvas ->
@@ -19,6 +19,23 @@ internal object RecordingTileArtwork {
                         floatArrayOf(0f, .3f, .5f, 1f), Shader.TileMode.CLAMP)
                 }
                 canvas.drawPath(MinuteNumeralArtwork.path(digit), paint)
+            })
+            for (name in listOf("pause", "resume", "mark")) addIdToImageMapping("control-$name", image(64, 64) { canvas ->
+                canvas.scale(2f, 2f)
+                val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = Color.rgb(228, 237, 206); strokeWidth = 2.4f
+                    strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND; style = Paint.Style.STROKE
+                }
+                when (name) {
+                    "pause" -> { canvas.drawLine(12f, 9f, 12f, 23f, paint); canvas.drawLine(20f, 9f, 20f, 23f, paint) }
+                    "resume" -> {
+                        paint.style = Paint.Style.FILL
+                        canvas.drawPath(Path().apply { moveTo(11f, 7f); lineTo(24f, 16f); lineTo(11f, 25f); close() }, paint)
+                    }
+                    "mark" -> canvas.drawPath(Path().apply {
+                        moveTo(10f, 7f); lineTo(22f, 7f); lineTo(22f, 25f); lineTo(16f, 21f); lineTo(10f, 25f); close()
+                    }, paint)
+                }
             })
             addIdToImageMapping("dial", image(300, 300) { canvas ->
                 canvas.drawPaint(Paint().apply {

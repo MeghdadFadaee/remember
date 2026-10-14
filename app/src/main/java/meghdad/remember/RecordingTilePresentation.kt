@@ -1,15 +1,17 @@
 package meghdad.remember
 
 import android.content.Context
+import androidx.wear.protolayout.ProtoLayoutScope
 import androidx.wear.protolayout.LayoutElementBuilders.Layout
 import androidx.wear.protolayout.TimelineBuilders
 import androidx.wear.tiles.TileBuilders
 
 /** Bounded minute artwork timeline, with one shared set of commands and a live time fallback. */
 internal object RecordingTilePresentation {
-    fun tile(context: Context, state: RecordingTileState, actions: RecordingTileActions, now: Long = System.currentTimeMillis()): TileBuilders.Tile {
+    fun tile(context: Context, state: RecordingTileState, actions: RecordingTileActions, now: Long = System.currentTimeMillis(),
+             scope: ProtoLayoutScope? = null): TileBuilders.Tile {
         val anchor = now - state.elapsedMillis
-        val layout = RecordingTileLayout(context, actions)
+        val layout = RecordingTileLayout(context, actions, scope = scope)
         val timeline = TimelineBuilders.Timeline.Builder()
         fun entry(minutes: Long, start: Long? = null, end: Long? = null, original: Boolean = true) {
             val item = TimelineBuilders.TimelineEntry.Builder().setLayout(

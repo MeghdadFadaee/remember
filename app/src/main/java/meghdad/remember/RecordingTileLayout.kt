@@ -1,6 +1,10 @@
 package meghdad.remember
 
 import android.content.Context
+import android.content.Intent
+import android.app.PendingIntent
+import android.app.ActivityOptions
+import androidx.wear.protolayout.ProtoLayoutScope
 import androidx.wear.protolayout.ActionBuilders
 import androidx.wear.protolayout.ColorBuilders.argb
 import androidx.wear.protolayout.DimensionBuilders.*
@@ -14,7 +18,10 @@ import java.time.Instant
 import kotlin.math.min
 
 /** Spatial home-screen composition, expressed as a system-rendered tile. */
-internal class RecordingTileLayout(private val context: Context, private val actions: RecordingTileActions) {
+@androidx.annotation.OptIn(markerClass = [androidx.wear.protolayout.expression.ProtoLayoutExperimental::class])
+internal class RecordingTileLayout(private val context: Context, private val actions: RecordingTileActions,
+                                   private val animateTransitions: Boolean = RecordingTileMotion.allowed(context),
+                                   private val scope: ProtoLayoutScope? = null) {
     private val commands = mutableMapOf<TileRecordingAction, Clickable>()
     private val lime = 0xffc7ea18.toInt()
 
@@ -40,7 +47,8 @@ internal class RecordingTileLayout(private val context: Context, private val act
         root.addContent(edge(size, 58f, 64f, 0xff3d492a.toInt()))
         for (i in 0..11) {
             root.addContent(edge(size, 301f - i * 5.3f, 2.4f, if (state.active && !state.paused) lime else 0xff3d492a.toInt()))
-            if (i < state.bookmarks) root.addContent(edge(size, 58f + i * 5.3f, 2.4f, 0xffe4edce.toInt()))
+            // Keep layer positions stable as bookmark count changes, preserving renderer diffing.
+            root.addContent(edge(size, 58f + i * 5.3f, 2.4f, if (i < state.bookmarks) 0xffe4edce.toInt() else 0x00000000))
         }
         val clockDescription = TypeBuilders.StringProp.Builder(context.getString(R.string.tile_timer_description, state.time))
         val digits = IntFormatter.Builder().setMinIntegerDigits(2).setGroupingUsed(false).build()
@@ -52,7 +60,7 @@ internal class RecordingTileLayout(private val context: Context, private val act
         if (originalArtwork) counterSemantics.setStateDescription(TypeBuilders.StringProp.Builder(
             context.resources.getQuantityString(R.plurals.tile_minutes, displayedMinutes.toInt(), displayedMinutes)).build())
         val numeral = Box.Builder().setWidth(dp(size * .74f)).setHeight(dp(size * .76f))
-            .setModifiers(Modifiers.Builder().setClickable(Clickable.Builder().setId("refresh")
+            .setModifiers(Modifiers.Builder().setClickable(Clickable.Builder().setId("refresh").setVisualFeedbackEnabled(false)
                 .setOnClick(ActionBuilders.LoadAction.Builder().build()).build())
                 .setSemantics(counterSemantics.build())
                 .setTransformation(Transformation.Builder().setTranslationX(dp(size * .02f)).setTranslationY(dp(-size * .025f)).build()).build())
@@ -75,49 +83,82 @@ internal class RecordingTileLayout(private val context: Context, private val act
         val statusLabel = context.getString(if (!state.active) R.string.tile_brand else if (state.paused) R.string.tile_paused else R.string.tile_recording)
         val status = Text.Builder().setText(statusLabel).setFontStyle(FontStyle.Builder().setSize(sp(10f))
             .setLetterSpacing(em(if (state.active) 0f else .2f)).setColor(argb(if (state.active) lime else 0xffffffff.toInt())).build())
-        if (state.active) status.setModifiers(Modifiers.Builder().setSemantics(Semantics.Builder().setContentDescription(
+        val statusModifiers = animatedModifiers()
+        if (state.active) statusModifiers.setSemantics(Semantics.Builder().setContentDescription(
             statusLabel + ". " + context.getString(R.string.tile_details, state.part,
-                context.resources.getQuantityString(R.plurals.tile_bookmarks, state.bookmarks, state.bookmarks))).build()).build())
+                context.resources.getQuantityString(R.plurals.tile_bookmarks, state.bookmarks, state.bookmarks))).build())
+        status.setModifiers(statusModifiers.build())
+        val primaryLabel = context.getString(if (state.active) R.string.tile_save else R.string.tile_start)
+        val primaryAction = if (state.active) command(state, TileRecordingAction.SAVE) else startAction()
         val controls = Column.Builder().setWidth(dp(width)).setHorizontalAlignment(HORIZONTAL_ALIGN_CENTER)
-            .addContent(status.build())
-            .addContent(gap(if (compact) 38f else 62f))
+            .addContent(status.build()).addContent(gap(if (compact) 38f else 62f))
+            // Same position, size, chrome, and child order for both Record and Save.
+            .addContent(button(primaryLabel, primaryAction, width)).addContent(gap(8f))
+        val satellites = Box.Builder().setWidth(dp(width)).setHeight(dp(64f))
         if (state.active) {
             val pause = if (state.paused) TileRecordingAction.RESUME else TileRecordingAction.PAUSE
-            controls.addContent(Row.Builder().addContent(button(context.getString(if (state.paused) R.string.tile_resume else R.string.tile_pause),
-                command(state, pause), false, (width - 6f) / 2))
-                .addContent(Spacer.Builder().setWidth(dp(6f)).build())
-                .addContent(button(context.getString(R.string.tile_mark), command(state, TileRecordingAction.MARK), false, (width - 6f) / 2)).build())
-                .addContent(gap(if (compact) 4f else 6f))
-                .addContent(button(context.getString(R.string.tile_save), command(state, TileRecordingAction.SAVE), true, width))
-        } else controls.addContent(button(context.getString(R.string.tile_start), Clickable.Builder().setId("start")
-            .setOnClick(ActionBuilders.LaunchAction.Builder().setAndroidActivity(ActionBuilders.AndroidActivity.Builder()
-                .setPackageName(context.packageName).setClassName(TileRecordingActivity::class.java.name).build()).build()).build(), true, width))
+            satellites.addContent(Row.Builder().setVerticalAlignment(VERTICAL_ALIGN_CENTER)
+                .setModifiers(animatedModifiers(rise = true).build())
+                .addContent(iconButton(context.getString(if (state.paused) R.string.tile_resume else R.string.tile_pause),
+                    if (state.paused) "control-resume" else "control-pause", command(state, pause)))
+                .addContent(Spacer.Builder().setWidth(dp(28f)).build())
+                .addContent(iconButton(context.getString(R.string.tile_mark), "control-mark", command(state, TileRecordingAction.MARK))).build())
+        }
+        controls.addContent(satellites.build())
         root.addContent(Box.Builder().setWidth(expand()).setHeight(expand()).setVerticalAlignment(VERTICAL_ALIGN_TOP)
             .setModifiers(Modifiers.Builder().setPadding(Padding.Builder().setTop(dp(if (compact) 12f else 16f)).build()).build())
             .addContent(controls.build()).build())
         return root.build()
     }
 
+    private fun startAction(): Clickable {
+        if (scope?.hasCapability(ProtoLayoutScope.RendererCapability.PENDING_INTENT_ACTION) == true) {
+            // A direct activity PendingIntent skips the host's shared-button launch animation.
+            val intent = Intent(context, TileRecordingActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+            val pending = PendingIntent.getActivity(context, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                ActivityOptions.makeCustomAnimation(context, 0, 0).toBundle())
+            return Clickable.Builder(scope, "start").setVisualFeedbackEnabled(false).setOnClick(pending).build()
+        }
+        return Clickable.Builder().setId("start").setVisualFeedbackEnabled(false)
+            .setOnClick(ActionBuilders.LaunchAction.Builder().setAndroidActivity(ActionBuilders.AndroidActivity.Builder()
+                .setPackageName(context.packageName).setClassName(TileRecordingActivity::class.java.name).build()).build()).build()
+    }
+
     private fun command(state: RecordingTileState, action: TileRecordingAction) = commands.getOrPut(action) {
-        Clickable.Builder().setId(actions.issue(state.clipId!!, action)).setOnClick(ActionBuilders.LoadAction.Builder().build()).build()
+        Clickable.Builder().setId(actions.issue(state.clipId!!, action)).setVisualFeedbackEnabled(false).setOnClick(ActionBuilders.LoadAction.Builder().build()).build()
     }
     private fun edge(size: Float, angle: Float, length: Float, color: Int) = Box.Builder()
         .setWidth(dp(size * .92f)).setHeight(dp(size * .92f)).addContent(Arc.Builder()
             .setAnchorAngle(degrees(angle)).setAnchorType(ARC_ANCHOR_START)
             .addContent(ArcLine.Builder().setLength(degrees(length)).setThickness(dp(size * .014f)).setColor(argb(color)).build()).build()).build()
-    private fun text(value: String, size: Float, color: Int) = Text.Builder().setText(value)
-        .setFontStyle(FontStyle.Builder().setSize(sp(size)).setColor(argb(color)).build()).setMaxLines(1).build()
     private fun gap(height: Float) = Spacer.Builder().setHeight(dp(height)).build()
-    private fun button(label: String, click: Clickable, primary: Boolean, width: Float) = Box.Builder()
+    private fun animatedModifiers(rise: Boolean = false) = Modifiers.Builder().apply {
+        if (animateTransitions) setContentUpdateAnimation(RecordingTileMotion.transition(rise))
+    }
+    private fun iconButton(label: String, resource: String, click: Clickable) = Box.Builder()
+        .setWidth(dp(48f)).setHeight(dp(48f))
+        .setModifiers(Modifiers.Builder().setClickable(click)
+            .setSemantics(Semantics.Builder().setRole(SEMANTICS_ROLE_BUTTON).setContentDescription(label).build()).build())
+        .addContent(Box.Builder().setWidth(dp(36f)).setHeight(dp(36f))
+            .setModifiers(Modifiers.Builder()
+                .setBorder(Border.Builder().setWidth(dp(1f)).setColor(argb(0x547d8b58)).build())
+                .setBackground(Background.Builder().setColor(argb(0xe5181f10.toInt()))
+                    .setCorner(Corner.Builder().setRadius(dp(18f)).build()).build()).build())
+            .addContent(Image.Builder().setResourceId(resource).setWidth(dp(22f)).setHeight(dp(22f)).build()).build()).build()
+
+    private fun button(label: String, click: Clickable, width: Float) = Box.Builder()
         .setWidth(dp(width)).setHeight(dp(48f))
         .setModifiers(Modifiers.Builder().setClickable(click)
             .setSemantics(Semantics.Builder().setRole(SEMANTICS_ROLE_BUTTON).setContentDescription(label).build())
-            .setBorder(Border.Builder().setWidth(dp(if (primary) 1f else 0f)).setColor(argb(0x8cc7ea18.toInt())).build())
-            .setBackground(Background.Builder().setColor(argb(if (primary) 0xbe181f10.toInt() else 0xcd2b3420.toInt()))
+            .setBorder(Border.Builder().setWidth(dp(1f)).setColor(argb(0x8cc7ea18.toInt())).build())
+            .setBackground(Background.Builder().setColor(argb(0xbe181f10.toInt()))
                 .setCorner(Corner.Builder().setRadius(dp(28f)).build()).build()).build())
-        .addContent(text(when (label) {
+        .addContent(Text.Builder().setText(when (label) {
             context.getString(R.string.tile_start) -> context.getString(R.string.tile_record_button)
             context.getString(R.string.tile_save) -> context.getString(R.string.tile_save_button)
             else -> label
-        }, 12f, 0xffe4edce.toInt())).build()
+        }).setFontStyle(FontStyle.Builder().setSize(sp(12f)).setColor(argb(0xffe4edce.toInt())).build())
+            .setMaxLines(1).setModifiers(animatedModifiers().build()).build()).build()
 }
