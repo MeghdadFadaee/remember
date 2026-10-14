@@ -2,7 +2,7 @@
 
 ## Scope & Project Status
 
-These instructions apply throughout the repository. Remember is an experimental, local-only microphone recorder for round Wear OS watches, with Galaxy Watch 7 as the primary design target. Physical-watch validation is still pending; successful builds or emulator tests do not establish production or Play Store readiness. Keep changes focused on the requested behavior and preserve unrelated work.
+These instructions apply throughout the repository. Remember is an experimental microphone recorder with optional self-hosted SFTP backup for round Wear OS watches, with Galaxy Watch 7 as the primary design target. Physical-watch validation is still pending; successful builds or emulator tests do not establish production or Play Store readiness. Keep changes focused on the requested behavior and preserve unrelated work.
 
 ## Project Structure & Module Organization
 
@@ -60,6 +60,17 @@ The UI uses native Android views and custom drawing, without Compose or a runtim
 - Preserve five-second storage refresh while that page is open, manual Refresh, and stale-result guards. Do not request usage access to other apps for this feature.
 - Stop decorative motion when animations are disabled, battery saver is active, the activity is backgrounded, or capture is paused. Avoid extra background polling or animation work.
 
+## Backup Invariants
+
+- `BackupActivity.kt` owns backup pages; `BackupSettings.kt` stores destination details, encrypted key material, and receipts. `BackupTransport.kt` handles pinned-key SFTP; `BackupWorker.kt` schedules persisted Android jobs and serializes network actions with `BackupGate`.
+- Require an explicit server configuration and an approved SHA256 host-key fingerprint. First-time discovery must reject the fetched key before authentication and save nothing until the user approves the approval screen. Block changed identities; explicit Forget trust pauses backups. Never disable host verification, authenticate an unapproved server, or log/export private keys. Encrypt stored SSH private keys using Android Keystore.
+- Generate new watch identities as Ed25519 using the Android-compatible BC backend and OpenSSH private-key format. Preserve existing RSA identities until explicit replacement; pause backups and require server authorization of the new public key when replacing one.
+- Upload only finalized clips. Preserve local audio, metadata, and bookmarks. Local deletion must not propagate to server backups. Scope receipts to the destination; acknowledge only the snapshot actually uploaded.
+- Resume temporary uploads, verify full-file SHA-256, then publish metadata as the completion marker. Do not mark a failed or incomplete upload as backed up. Respect cancellation, socket timeouts, bounded buffers, and one active connection at a time.
+- Keep automatic uploads opt-in, constrained to charging and unmetered connections by default. Use Android JobScheduler; scheduling is approximate and must not claim exact-time execution.
+- Remote listening uses a verified temporary cache, not streaming. Pause playback outside the foreground and retain the previous cache if download verification fails. Remote filenames and manifests are untrusted: enforce safe IDs, sizes, and bounded metadata reads.
+- SSH encrypts transport, not stored server files. Do not present at-rest encryption, restore, or remote deletion controls until implemented.
+
 ## Testing Guidelines
 
 Use JUnit 4 for JVM tests and AndroidJUnit4/AndroidX instrumentation for device tests; Espresso is available. Name test classes `*Test` and methods after expected behavior. Cover changed boundaries and recording behavior; no numeric coverage threshold is configured. Recording-service changes require device tests on a disposable microphone-enabled emulator. Ensure only the intended emulator is connected, and never test during a personal recording.
@@ -76,6 +87,6 @@ Use concise, descriptive commit subjects. Keep PRs focused, explain behavior cha
 
 Preserve audio and bookmarks, rotary access, spoken descriptions, and animation/battery preferences. Discuss accounts, networking, or analytics before introducing them. Keep personal audio, credentials, signing keys, local configuration, and build output untracked. See `CONTRIBUTING.md` and `PRIVACY.md` for additional guidance.
 
-Keep the app standalone and local-only, with no internet permission, accounts, analytics, ads, or uploads unless an explicitly discussed feature changes that scope. Backups are disabled; uninstalling removes recordings and preferences. Do not include private recordings, identifying logs, or machine-specific paths in documentation, issues, or screenshots.
+Keep capture standalone and local. Optional SFTP networking is authorized for user-configured backups and remote playback; automatic backup is off by default. Do not add app accounts, analytics, ads, or other network services without discussing them. Android backups are disabled; uninstalling removes local recordings, SSH identity, and preferences but leaves server copies intact. Do not include private recordings, identifying logs, or machine-specific paths in documentation, issues, or screenshots.
 
 Keep `README.md`, `PRIVACY.md`, and screenshots aligned with changes to behavior, setup, permissions, or limitations. Code and original artwork use MIT; maintain `THIRD_PARTY_NOTICES.md` and relevant notices when adding dependencies or assets. The design is inspired by Samsung's Spatial Number face, but no Samsung font or wallpaper is bundled; use original or appropriately licensed assets.

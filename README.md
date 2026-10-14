@@ -20,6 +20,7 @@ Screenshots from a Wear OS round-screen emulator:
 - Floating rounded numerals show captured minutes; the background sweep shows seconds within the current minute.
 - A live microphone edge meter and an interactive bookmark/playback edge.
 - Device and app storage monitoring with a large proportional chart.
+- Optional SFTP backups to your own server, a transfer queue, scheduled uploads, and remote playback.
 - Optional minute limits: save and stop, or save each clip and start the next at zero.
 - Native controls, spoken descriptions for custom visuals, and rotary input.
 
@@ -30,7 +31,9 @@ The appearance is inspired by Samsung's [Spatial Number watch face](https://gala
 **Experimental: suitable for development and evaluation.** Build, lint, unit tests, and recording integration tests have passed locally. The UI has been checked on a Wear OS round-screen emulator; recording integration tests used a separate Android emulator. Physical Galaxy Watch 7 validation is still pending.
 
 - Captures microphone sound, not internal system audio or call audio.
-- Recordings stay on the watch. Export, phone transfer, and transcription are not implemented.
+- Recordings stay on the watch unless you configure and trigger SFTP backups. Phone transfer, restore into the local library, and transcription are not implemented.
+- Backup is experimental. Your real server and its 128 MB memory budget have not yet been validated.
+- Backup generates Ed25519 watch keys and pins the server fingerprint. Existing RSA watch keys remain usable until explicitly replaced. Password login and private-key import are not implemented; RSA, ECDSA, and Ed25519 server host keys are supported.
 - Playback pauses when you leave the playback activity.
 - A brief gap can occur between automatically split clips.
 - Each clip has a 500 MB safety cap; reaching it saves the clip and stops the session.
@@ -116,6 +119,27 @@ Turn the limit off for unlimited recording by time, or turn it on and choose **1
 
 Under **At the limit**, choose **Save & stop** to end the recording, or **Save & start next** to continue with a new clip at zero. Split clips have numbered titles and their own bookmarks. Paused time does not count. Changes apply to the next recording session, including all its parts. The 500 MB safety cap applies in either mode.
 
+## Backup
+
+Open **Settings → Backup**. Dedicated pages keep setup, transfer status, remote listening, and scheduling separate.
+
+<p>
+  <img src="docs/backup-overview.png" width="240" alt="Backup overview with backed-up and waiting counts and Back up now" />
+  <img src="docs/backup-trust.png" width="240" alt="Server approval with Trust server and Cancel buttons, without fingerprint typing" />
+  <img src="docs/backup-server.png" width="240" alt="Server settings with address, port, and username fields" />
+  <img src="docs/backup-automatic.png" width="240" alt="Automatic backup disabled, with charging and unmetered preferences enabled" />
+</p>
+
+- **Server:** configure address, port, username, and an existing absolute backup folder. **Connect & trust** fetches the fingerprint without typing; approve the server once to remember it. Create the watch key, export or copy its public key, and authorize it on your server. Test connection before uploading. See [server setup](docs/backup.md).
+- **Transfers:** shows saved recordings and their status. **Back up / Retry** queues unfinished or changed recordings. **Pause all backups** cancels transfers and turns automatic backup off. Local recordings are never deleted by backup; local deletion does not delete server copies.
+- **Server recordings:** Refresh lists completed Remember backups (up to 1,000 per folder). Select a recording to download a verified temporary copy and play it with seeking and bookmark buttons. This is cached playback, not live streaming; sufficient watch storage is required. Leaving the activity pauses playback.
+- **Automatic backup:** opt in to checks every hour, every six hours, or daily. Charging and unmetered connections are required by default and can be changed. Unmetered does not necessarily mean Wi-Fi. Android schedules work when conditions allow, rather than at an exact clock time; jobs persist across reboot.
+- **Advanced:** choose 1/3/5 retry attempts, a 20/40/60-second connection timeout, or clear the playback cache. Server identity shows the remembered fingerprint; Forget trust pauses backups and allows a verified server-key change to be approved again.
+
+Uploads use one SFTP connection at a time and bounded buffers, without a database, HTTP backend, shell commands, or compression. Interrupted audio uploads resume; the completed remote audio is read back and SHA-256 checked before publishing metadata and marking it backed up. This integrity check costs an additional full-file download. Each clip has its own audio file and JSON manifest containing title, duration, bookmarks, byte count, and checksum. Metadata changes queue another backup. Receipts are scoped to server address, account, folder, and pinned host key. A receipt records a successful transfer; it does not continuously check whether a server copy was subsequently removed.
+
+The watch's private SSH key is encrypted using Android Keystore. SSH encrypts transport; audio and metadata on your server are **not encrypted at rest**. End-to-end encryption, exact-time scheduling, bandwidth caps, remote deletion, and restoration into the local library are not implemented. Automatic backup checks periodically for finished clips; saving a clip does not force an immediate upload. Interrupted jobs retain partial files for a later retry, subject to the configured retry limit.
+
 ## Tests and automated checks
 
 Local checks:
@@ -130,13 +154,13 @@ Device tests require a **disposable** emulator with a microphone. They create au
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
-Coverage includes duration formatting, limit boundaries, pause exclusion, real one-minute automatic stop and split rollover, playable file output, bookmarks, settings persistence/navigation, storage accounting, and clip rename/delete behavior.
+Coverage includes backup destination validation, encrypted watch-key persistence, backup-page navigation, manifest safety, and (with an opt-in disposable SFTP fixture) resumable transfers, checksum verification, host-key rejection, actual scheduled uploads, scheduling constraints, and cached remote playback/background pause. Network fixture instructions are in [docs/backup.md](docs/backup.md). Coverage also includes duration formatting, limit boundaries, pause exclusion, real one-minute automatic stop and split rollover, playable file output, bookmarks, settings persistence/navigation, storage accounting, and clip rename/delete behavior.
 
 [Android checks](.github/workflows/android.yml) runs on pushes, pull requests, and manual dispatch. It verifies the wrapper, builds the debug app, runs lint and unit tests, and compiles device tests. It uploads check reports and a debug APK with a 14-day retention period. Device tests are run locally; the workflow does not claim to run them. The workflow uses pinned action commits and read-only repository permissions. Its first hosted run will happen after the repository is pushed to GitHub.
 
 ## Privacy, contributions, and license
 
-Recordings remain in the app's private local storage. There are no accounts, analytics, ads, or upload features, and no internet permission. See [PRIVACY.md](PRIVACY.md).
+Recordings use private local storage, with optional uploads to your own SFTP server. Automatic backups are off by default. There are no app accounts, analytics, or ads. See [PRIVACY.md](PRIVACY.md).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development and pull-request guidance. Keep private audio, credentials, signing keys, local IDE/device configuration, and build output out of the repository.
 

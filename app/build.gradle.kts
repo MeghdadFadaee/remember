@@ -35,6 +35,8 @@ android {
 }
 
 dependencies {
+    implementation(libs.jsch)
+    implementation(libs.bcprov)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)

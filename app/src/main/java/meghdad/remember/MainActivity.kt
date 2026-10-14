@@ -243,6 +243,7 @@ class MainActivity : Activity() {
         text("Make it yours.", 17f)
         button("Storage") { screen = "storage"; render() }.apply { layoutParams.height = dp(56) }
         button("Recording limit") { screen = "limits"; render() }.apply { layoutParams.height = dp(56) }
+        button("Backup") { startActivity(Intent(this, BackupActivity::class.java)) }.apply { layoutParams.height = dp(56) }
         button(if (active) "Back to recording" else "Back") { screen = "home"; render() }
     }
     private fun storage() {

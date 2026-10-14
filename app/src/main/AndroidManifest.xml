@@ -7,6 +7,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <application android:allowBackup="false" android:dataExtractionRules="@xml/data_extraction_rules" android:icon="@drawable/ic_remember"
         android:label="@string/app_name" android:supportsRtl="true" android:theme="@style/Theme.Remember">
         <meta-data android:name="com.google.android.wearable.standalone" android:value="true" />
@@ -17,5 +20,7 @@
             </intent-filter>
         </activity>
         <service android:name=".RecordingService" android:exported="false" android:foregroundServiceType="microphone" />
+        <activity android:name=".BackupActivity" android:exported="false" android:taskAffinity="" />
+        <service android:name=".BackupWorker" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="true" />
     </application>
 </manifest>

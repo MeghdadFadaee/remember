@@ -25,6 +25,7 @@ Recording-service changes also need the device tests. Use a disposable emulator:
 - Keep microphone activity visible to the user. Recording should begin with an explicit action.
 - Preserve saved audio and bookmarks when changing recording or storage behavior.
 - Respect disabled system animations and battery-saving mode.
-- Do not introduce accounts, networking, or analytics without discussing the change first.
+- SFTP backup and remote playback are opt-in network features. Preserve fingerprint verification, encrypted key storage, cancellation, checksums, local retention, and charging/network preferences. Test against disposable server folders and recordings.
+- Do not introduce app accounts, additional network services, or analytics without discussing the change first.
 
 Do not include local IDE/device configuration, credentials, signing keys, build output, or personal audio in a pull request. Avoid attaching private recordings or identifying information to issues. Contributions are covered by the repository's [MIT license](LICENSE).
