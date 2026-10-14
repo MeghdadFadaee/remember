@@ -35,6 +35,11 @@ android {
 }
 
 dependencies {
+    implementation(libs.wear.tiles)
+    implementation(libs.wear.protolayout)
+    implementation(libs.wear.protolayout.expression)
+    implementation(libs.concurrent.futures)
+    androidTestImplementation(libs.wear.tiles.renderer)
     implementation(libs.jsch)
     implementation(libs.bcprov)
     testImplementation(libs.junit)

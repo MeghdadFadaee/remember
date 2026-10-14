@@ -1,6 +1,9 @@
 package meghdad.remember
 
 import android.app.*
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.MediaRecorder
@@ -17,6 +20,31 @@ class RecordingService : Service() {
         @Volatile var marks: List<Long> = emptyList(); private set
         @Volatile var part = 1; private set
         var message: String? = null
+        private var running: RecordingService? = null
+
+        // Tile callbacks and recorder commands share the main thread.
+        internal fun tileState(): RecordingTileState = running?.let { service ->
+            if (service.recorder == null) RecordingTileState() else RecordingTileState(
+                activeId, paused, service.capturedTime(), marks.size, part,
+            )
+        } ?: RecordingTileState()
+
+        internal fun tileCommand(clipId: String, action: TileRecordingAction) {
+            val service = running ?: return
+            if (activeId != clipId || service.recorder == null || service.transitioning) return
+            try {
+                when (action) {
+                    TileRecordingAction.PAUSE -> if (!paused) service.togglePause()
+                    TileRecordingAction.RESUME -> if (paused) service.togglePause()
+                    TileRecordingAction.MARK -> service.addMark()
+                    TileRecordingAction.SAVE -> service.finishRecording()
+                }
+            } catch (_: Exception) {
+                message = "Recording interrupted. Please try again."
+                service.release(); service.stopSelf()
+            }
+        }
+
         const val START = "start"
         const val PAUSE = "pause"
         const val SAVE = "save"
@@ -49,13 +77,28 @@ class RecordingService : Service() {
             }
         }
     }
+    private val clockChanges = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) { refreshTile() }
+    }
+    override fun onCreate() {
+        super.onCreate()
+        running = this
+        registerReceiver(clockChanges, IntentFilter(Intent.ACTION_TIME_CHANGED))
+    }
+    private fun refreshTile() = RecordingTileService.refresh(this)
+    private fun addMark() {
+        if (recorder != null && !transitioning) {
+            marks = marks + capturedTime()
+            refreshTile()
+        }
+    }
     override fun onBind(intent: Intent?) = null
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         try {
             when (intent?.action) {
                 START -> if (recorder == null) begin()
                 PAUSE -> togglePause()
-                MARK -> if (recorder != null && !transitioning) marks = marks + capturedTime()
+                MARK -> addMark()
                 SAVE -> if (recorder != null) finishRecording() else stopSelf()
             }
         } catch (_: Exception) {
@@ -107,6 +150,7 @@ class RecordingService : Service() {
         // During rollover the old ID stays visible until the new recorder is ready.
         activeId = id
         handler.post(tick)
+        refreshTile()
     }
     private fun togglePause() {
         val current = recorder ?: return
@@ -116,6 +160,7 @@ class RecordingService : Service() {
             current.pause(); accumulated += SystemClock.elapsedRealtime() - segmentStart
             elapsed = accumulated; paused = true
         }
+        refreshTile()
     }
     private fun saveClip(): Boolean {
         val current = recorder ?: return false
@@ -163,6 +208,12 @@ class RecordingService : Service() {
         lock?.let { if (it.isHeld) it.release() }; lock = null
         activeId = null; paused = false; amplitude = 0
         stopForeground(STOP_FOREGROUND_REMOVE)
+        refreshTile()
     }
-    override fun onDestroy() { if (recorder != null) finishRecording(); super.onDestroy() }
+    override fun onDestroy() {
+        if (recorder != null) finishRecording()
+        if (running === this) running = null
+        unregisterReceiver(clockChanges)
+        super.onDestroy()
+    }
 }

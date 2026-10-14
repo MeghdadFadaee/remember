@@ -10,6 +10,7 @@ Remember records audio only after the user starts capture and grants microphone 
 - Scheduled backups use Android JobScheduler with your selected charging/network constraints. Boot permission allows scheduled jobs to persist after restarting the watch. Jobs may retry failed transfers within your configured retry limit.
 - Storage monitoring reads device capacity and Remember's own usage; it does not request access to another app's data.
 - Recording uses a microphone foreground service so it can continue when the screen is off. An ongoing recording notification includes a Save action when notifications are allowed.
+- The optional current-recording tile shares elapsed time, recording/paused status, part number, and bookmark count with the watch's system tile renderer. It exposes no audio, recording titles, server details, or network features. Its Record button explicitly starts capture through a visible activity after microphone permission is granted, then returns to the tile. Other controls manage the existing recording. Merely viewing the tile never starts capture.
 - Playback pauses when the playback activity leaves the foreground.
 - Renaming updates a recording's local metadata. Deletion removes the recording after confirmation.
 - Uninstalling the app removes local recordings, preferences, playback cache, and the stored SSH identity. It does not delete server backups. You will need to authorize a new watch public key after reinstalling. Restoring backups into the local library and phone transfer are not implemented.

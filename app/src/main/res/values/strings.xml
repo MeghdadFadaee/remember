@@ -82,4 +82,28 @@
     <string name="backup_trust_server_address">%1$s:%2$d</string>
     <string name="backup_remember_server">Remember this server.</string>
     <string name="backup_view_fingerprint">View fingerprint</string>
+    <string name="tile_label">Current recording</string>
+    <string name="tile_description">Start recording, see elapsed time, pause, resume, mark, or save your current recording.</string>
+    <string name="tile_brand">REMEMBER</string>
+    <string name="tile_recording">● RECORDING</string>
+    <string name="tile_paused">PAUSED</string>
+    <string name="tile_start">Record</string>
+    <string name="tile_record_button">● Record</string>
+    <string name="tile_save_button">■ Save</string>
+    <string name="tile_microphone_needed">Microphone access is needed to record.</string>
+    <string name="tile_start_failed">Could not start recording. Please try again in Remember.</string>
+    <string name="tile_pause">Pause</string>
+    <string name="tile_resume">Resume</string>
+    <string name="tile_mark">Mark</string>
+    <string name="tile_save">Save</string>
+    <string name="tile_details">Part %1$d · %2$s</string>
+    <plurals name="tile_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <plurals name="tile_bookmarks">
+        <item quantity="one">%d bookmark</item>
+        <item quantity="other">%d bookmarks</item>
+    </plurals>
+    <string name="tile_timer_description">Elapsed recording time %1$s. Tap to refresh.</string>
 </resources>

@@ -11,7 +11,7 @@ Remember is a standalone Wear OS audio recorder with one Android module, `app`. 
 - `Recordings.kt`: private audio files, JSON metadata, recovery, and duration formatting.
 - `RecordingLimits.kt`: persisted preferences and minute-limit policy.
 - `StorageUsage.kt` / `StorageChartView.kt`: storage accounting and chart rendering.
-- `MinuteCounterView.kt` / `SpatialDrawables.kt`: original vector numerals, motion, and dial/edge visuals.
+- `MinuteCounterView.kt` / `MinuteNumeralArtwork.kt` / `SpatialDrawables.kt`: shared original numeral paths, motion, and dial/edge visuals.
 
 ## Build, Test, and Development Commands
 
@@ -59,6 +59,14 @@ The UI uses native Android views and custom drawing, without Compose or a runtim
 - Storage reads use Android's device capacity/available accounting and Remember's own app usage. `dataBytes` already includes cache: do not add `cacheBytes` again. Mark fallback app accounting as approximate. Show proportional chart slices; a small visibility marker must not inflate the app's actual share.
 - Preserve five-second storage refresh while that page is open, manual Refresh, and stale-result guards. Do not request usage access to other apps for this feature.
 - Stop decorative motion when animations are disabled, battery saver is active, the activity is backgrounded, or capture is paused. Avoid extra background polling or animation work.
+
+## Recording Tile
+
+- `RecordingTileService.kt` provides the system Wear OS tile, `RecordingTileLayout.kt` builds its ProtoLayout UI, `RecordingTilePresentation.kt` assembles its minute timeline, `RecordingTileArtwork.kt` caches small image resources from the shared original numeral paths (bump its resource version when those images change), and `RecordingTileState.kt` defines snapshots and bounded one-shot action tokens. Keep the tile limited to the current recording; no library, storage, backup, or settings features.
+- Never start microphone capture from a background tile callback. The idle tile has a Record launch action to `TileRecordingActivity`: a transparent, tile-host-permission-protected activity requests microphone permission when needed, starts capture only while visible, and returns to the tile once recording begins. Never auto-start from an idle render or ordinary app launch. Active controls operate only on the existing service on the main thread, validate the current clip ID, and use explicit pause/resume commands. Consume tokens once; stale or replayed clicks must not affect a new part/session.
+- Request tile updates on recording state changes, not on recorder ticks. Mirror the recording page with the original minute numeral behind translucent Pause/Mark and Save controls, a seconds half-dial, capture-state and bookmark edge ticks, and no numeral caption. Use a host timeline for minute artwork, host-rendered dynamic seconds/spoken time, a live numeric fallback beyond the artwork timeline, and tap-to-refresh. Share one set of one-shot action tokens across future timeline entries so generating frames cannot evict current controls. Captured duration stays monotonic; wall-clock changes re-anchor the tile. Do not add background polling or wake locks for the tile.
+- Protect the exported tile provider with `com.google.android.wearable.permission.BIND_TILE_PROVIDER`. Keep 48 dp controls, round-screen bounds, and spoken descriptions. Use the native Tiles/ProtoLayout APIs without Compose. Tile screenshots and provider previews must use disposable recordings.
+- Test actual carousel controls and pause exclusion on a disposable Wear OS emulator when changing tile/service integration. Check idle behavior, replay/stale command rejection, split/stop updates, large minute values, and smaller round layouts. The tile minute-rollover test captures for a real minute and checks the actual carousel artwork transition.
 
 ## Backup Invariants
 

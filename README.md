@@ -18,6 +18,7 @@ Screenshots from a Wear OS round-screen emulator:
 
 - One-tap microphone recording, pause/resume, and on-watch playback.
 - Timestamp bookmarks, renaming, and deletion with confirmation.
+- A recording Wear OS Tile with one-tap Record, elapsed time, pause/resume, Mark, and Save.
 - Recording continues in a microphone foreground service when the screen turns off or you leave the app.
 - Floating rounded numerals show captured minutes; the background sweep shows seconds within the current minute.
 - A live microphone edge meter and an interactive bookmark/playback edge.
@@ -106,6 +107,20 @@ The pairing and connection ports are different. Read each from the watch's Wirel
 
 Audio is stored as mono AAC in M4A files at 44.1 kHz / 128 kbps, approximately 1 MB per minute. The large numeral shows whole minutes in the current recording or playback, and total saved minutes on the home screen. Floating motion stops while capture is paused, the app is in the background, animations are disabled, or battery saver is active.
 
+## Current recording tile
+
+Add **Remember → Current recording** from the watch's **Add tiles** screen (swipe through your tiles from the watch face). The tile mirrors the app’s home/recording screen: original rounded minute artwork behind translucent controls, an olive dial with a half-circle seconds sweep, and **Pause / Resume** and **Mark** above **Save**. The left edge indicates capturing/paused state and the right edge lights up for bookmarks (up to twelve visible marks). The status has spoken part and full bookmark counts. These controls work directly in the tile while the recording service continues in the background. It has no library, backup, or settings controls.
+
+With no active recording, the tile shows the **REMEMBER** heading, a zero numeral, and **Record**. Tap **Record** to begin and stay on the tile. A brief transparent activity handles Android’s foreground microphone requirements; it asks for microphone access only when needed and returns to the tile after capture starts. Denying access leaves recording stopped. Ordinary app launches do not start capture. Paused time is excluded. Saving or reaching a stop limit returns the tile to idle; automatic splitting switches it to the new part at zero. Delayed commands for a previous clip are ignored.
+
+The system renderer advances the seconds sweep and spoken time once per second on hosts supporting dynamic expressions (Wear OS 4+); older hosts show a seconds snapshot. Original minute glyphs advance through a one-hour system timeline, with a live numeric fallback if a host retains the tile longer. Tap the numeral to refresh it. State changes request an update, and the tile requests a periodic refresh, but Wear OS controls delivery timing. The app does not poll or run another recording service for the tile. Physical Galaxy Watch tile validation is pending.
+
+<p>
+  <img src="docs/tile-recording.png" width="240" alt="Current recording tile matching the app home, with a large rounded minute numeral behind Pause, Mark, and Save" />
+  <img src="docs/tile-paused.png" width="240" alt="Paused recording tile with Resume, Mark, and Save" />
+  <img src="docs/tile-idle.png" width="240" alt="Idle tile with a Record button" />
+</p>
+
 ## Menu and preferences
 
 Open the transparent four-dot **Menu** icon at the bottom center of the home or recording screen. A three-column icon grid opens Recorder, Moments, Storage, Recording limit, Backup, Server, Transfers, Server recordings, Automatic backup, and Advanced directly. Scroll or use rotary input for the lower rows. The transparent Menu shortcut floats over full-screen pages without a reserved footer bar. Touch the screen to reveal it; it hides after three seconds without interaction. Rotary input also reveals it. It stays visible for touch exploration and keyboard focus, and respects the system accessibility timeout. Returning preserves your grid position. Back returns to the grid, or to the parent page for a clip, picker, or approval step. Recording continues while you browse.
@@ -126,7 +141,7 @@ Under **At the limit**, choose **Save & stop** to end the recording, or **Save &
 
 ## Backup
 
-Open **Menu → Backup** for the dashboard. **Server**, **Transfers**, **Server recordings**, **Automatic backup**, and **Advanced** are independent tiles in the same menu.
+Open **Menu → Backup** for the dashboard. **Server**, **Transfers**, **Server recordings**, **Automatic backup**, and **Advanced** are separate buttons in the same menu.
 
 <p>
   <img src="docs/backup-overview.png" width="240" alt="Backup overview with backed-up and waiting counts and Back up now" />
@@ -154,13 +169,13 @@ Local checks:
 ./gradlew :app:assembleDebug :app:lintDebug :app:testDebugUnitTest :app:assembleDebugAndroidTest
 ```
 
-Device tests require a **disposable** emulator with a microphone. They create audio files and temporarily change preferences. Two tests record for a real minute; do not run them during a personal recording. Ensure only the intended test emulator is connected, because the connected-test task can target every connected device.
+Device tests require a **disposable** emulator with a microphone. They create audio files and temporarily change preferences. Two recording-limit tests and one tile minute-rollover test each record for a real minute; do not run them during a personal recording. Ensure only the intended test emulator is connected, because the connected-test task can target every connected device.
 
 ```sh
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
-Coverage includes backup destination validation, encrypted watch-key persistence, the shared menu, direct section navigation and back behavior, backup-page navigation, manifest safety, and (with an opt-in disposable SFTP fixture) resumable transfers, checksum verification, host-key rejection, actual scheduled uploads, scheduling constraints, and cached remote playback/background pause. Network fixture instructions are in [docs/backup.md](docs/backup.md). Coverage also includes duration formatting, limit boundaries, pause exclusion, real one-minute automatic stop and split rollover, playable file output, bookmarks, settings persistence/navigation, storage accounting, and clip rename/delete behavior.
+Coverage includes backup destination validation, encrypted watch-key persistence, the shared menu, direct section navigation and back behavior, backup-page navigation, manifest safety, and (with an opt-in disposable SFTP fixture) resumable transfers, checksum verification, host-key rejection, actual scheduled uploads, scheduling constraints, and cached remote playback/background pause. Network fixture instructions are in [docs/backup.md](docs/backup.md). Coverage also includes one-tap tile recording, microphone denial/approval (on a fresh disposable watch before permission is granted; otherwise skipped), the actual Wear OS tile carousel, live/paused timing, direct recording controls, screen-off capture, stale-command rejection, tile layout bounds, duration formatting, limit boundaries, pause exclusion, real one-minute automatic stop and split rollover, playable file output, bookmarks, settings persistence/navigation, storage accounting, and clip rename/delete behavior.
 
 [Android checks](.github/workflows/android.yml) runs on pushes, pull requests, and manual dispatch. It verifies the wrapper, builds the debug app, runs lint and unit tests, and compiles device tests. It uploads check reports and a debug APK with a 14-day retention period. Device tests are run locally; the workflow does not claim to run them. The workflow uses pinned action commits and read-only repository permissions. Its first hosted run will happen after the repository is pushed to GitHub.
 

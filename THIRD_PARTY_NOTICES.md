@@ -16,6 +16,10 @@ The app includes [mwiede/JSch 2.28.8](https://github.com/mwiede/jsch/tree/jsch-2
 
 [Bouncy Castle bcprov-jdk18on 1.86](https://www.bouncycastle.org/) provides Android-compatible Ed25519 key generation and signatures through JSch's BC backend. It is distributed under the Bouncy Castle license (MIT-style), retained in [licenses/Bouncy-Castle.txt](licenses/Bouncy-Castle.txt) and bundled in the app's license assets. Android's installed security providers are not replaced.
 
+## AndroidX Tiles and concurrency
+
+The recording tile uses AndroidX Wear Tiles 1.6.2, ProtoLayout/ProtoLayout Expression 1.4.2, and Concurrent Futures 1.3.0, distributed under the Apache License, Version 2.0. The transitive Guava `listenablefuture` API is also Apache-2.0 licensed. A copy of the license is retained in [licenses/Apache-2.0.txt](licenses/Apache-2.0.txt) and bundled in the app's license assets. These libraries and their notices retain their upstream licenses; they are not relicensed under MIT. The tile renderer dependency is used only in device tests.
+
 ## Resolved dependencies and platform resources
 
 Android APIs, Kotlin runtime libraries, the Android Gradle Plugin, and test libraries are obtained through the Android SDK or Gradle rather than copied as source into this repository. Their own license notices apply. Dependency coordinates and versions are listed in `gradle/libs.versions.toml` and `app/build.gradle.kts`.
