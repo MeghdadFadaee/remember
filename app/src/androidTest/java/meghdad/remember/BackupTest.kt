@@ -39,18 +39,18 @@ class BackupTest {
         editor.commit()
     }
     @Test fun backupPagesAreReachableAndAutomaticUploadsDefaultOff() {
-        val activity = instrumentation.startActivitySync(Intent(context, BackupActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        try {
-            instrumentation.runOnMainSync {
-                fun descendants(view: View): List<View> = listOf(view) + if (view is ViewGroup)
-                    (0 until view.childCount).flatMap { descendants(view.getChildAt(it)) } else emptyList()
-                fun button(label: String) = descendants(activity.window.decorView).filterIsInstance<Button>().first { it.text == label }
-                listOf("Server", "Transfers", "Server recordings", "Automatic backup", "Advanced").forEach {
-                    button(it).performClick(); button("Back").performClick()
+        listOf("overview", "server", "transfers", "remote", "automatic", "advanced").forEach { page ->
+            val activity = instrumentation.startActivitySync(Intent(context, BackupActivity::class.java)
+                .putExtra(BackupActivity.EXTRA_PAGE, page).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            try {
+                instrumentation.runOnMainSync {
+                    fun descendants(view: View): List<View> = listOf(view) + if (view is ViewGroup)
+                        (0 until view.childCount).flatMap { descendants(view.getChildAt(it)) } else emptyList()
+                    assertTrue(descendants(activity.window.decorView).filterIsInstance<Button>().any { it.contentDescription == "Open all sections" })
                 }
-            }
-            assertFalse(settings.automatic)
-        } finally { instrumentation.runOnMainSync { activity.finish() } }
+            } finally { instrumentation.runOnMainSync { activity.finish() } }
+        }
+        assertFalse(settings.automatic)
     }
     @Test fun encryptedWatchKeyPersistsWithoutPlaintextPrivateKeyInPreferences() {
         val public = settings.generateKey()
@@ -107,8 +107,8 @@ class BackupTest {
         try {
             settings.save(pending)
             settings.preferences.edit().remove("key").remove("public_key").commit()
-            activity = instrumentation.startActivitySync(Intent(context, BackupActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            press("Server")
+            activity = instrumentation.startActivitySync(Intent(context, BackupActivity::class.java)
+                .putExtra(BackupActivity.EXTRA_PAGE, "server").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             instrumentation.runOnMainSync {
                 assertEquals("Fingerprint must not require typing", 4, descendants(activity!!.window.decorView).filterIsInstance<EditText>().size)
             }
@@ -214,7 +214,7 @@ class BackupTest {
         settings.generateKey()
         instrumentation.uiAutomation.grantRuntimePermission(context.packageName, Manifest.permission.RECORD_AUDIO)
         try {
-            activity = instrumentation.startActivitySync(Intent(context, BackupActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            activity = instrumentation.startActivitySync(Intent(context, BackupActivity::class.java).putExtra(BackupActivity.EXTRA_PAGE, "remote").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             val recorder = MediaRecorder(context)
             try {
                 recorder.setAudioSource(MediaRecorder.AudioSource.MIC)
@@ -239,9 +239,13 @@ class BackupTest {
                 }
                 assertTrue("Remote playback did not reach expected state", ready)
             }
-            click("Server recordings"); click("Refresh")
-            await { descendants(activity!!.window.decorView).filterIsInstance<Button>().any { it.text.startsWith(clip.title) } }
-            click(clip.title); click("Download & play")
+            click("Refresh")
+            await { descendants(activity!!.window.decorView).filterIsInstance<android.widget.TextView>().any { it.text == clip.title } }
+            instrumentation.runOnMainSync {
+                descendants(activity!!.window.decorView).filterIsInstance<android.widget.TextView>().first { it.text == clip.title }
+                    .let { (it.parent.parent as View).performClick() }
+            }
+            click("Download & play")
             val playerField = BackupActivity::class.java.getDeclaredField("player").apply { isAccessible = true }
             val readyField = BackupActivity::class.java.getDeclaredField("playbackReady").apply { isAccessible = true }
             await { readyField.getBoolean(activity) && (playerField.get(activity) as? MediaPlayer)?.isPlaying == true }

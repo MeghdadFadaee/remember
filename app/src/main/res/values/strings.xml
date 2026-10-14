@@ -1,4 +1,27 @@
 <resources>
+    <string name="menu">Menu</string>
+    <string name="open_menu">Open all sections</string>
+    <string name="recorder">Recorder</string>
+    <string name="moments">Moments</string>
+    <string name="storage">Storage</string>
+    <string name="recording_limit">Recording limit</string>
+    <string name="autopilot">Autopilot</string>
+    <string name="on_your_server">On your server</string>
+    <string name="fine_tune">Fine tune</string>
+    <string name="your_pace">Your pace</string>
+    <string name="on_your_wrist">On your wrist</string>
+    <string name="retry_attempts">RETRY ATTEMPTS</string>
+    <string name="connection_timeout">CONNECTION TIMEOUT</string>
+    <string name="on_this_watch">ON THIS WATCH</string>
+    <string name="check_interval">CHECK INTERVAL</string>
+    <string name="pause_all">Pause all</string>
+    <string name="backup_waiting_count">%1$d waiting on your wrist</string>
+    <string name="backup_last">Last backup</string>
+    <string name="backup_destination">Destination</string>
+    <string name="backup_no_destination">Choose Server in the menu</string>
+    <string name="backup_none_completed">No completed backup yet</string>
+    <string name="backup_automatic_on">Automatic backups are on</string>
+    <string name="backup_automatic_off">Automatic backups are off</string>
     <string name="app_name">Remember</string>
     <string name="backup_download_progress">Downloading · %1$d%%</string>
     <string name="backup_address">Address</string>

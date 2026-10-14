@@ -23,6 +23,10 @@ class MainActivity : Activity() {
     private lateinit var scroll: ScrollView
     private lateinit var store: Recordings
     private var screen = "home"
+    private var menuOffset = 0
+    private var foreground = false
+    private var floatingMenu: FloatingMenuController? = null
+    companion object { const val EXTRA_SCREEN = "screen" }
     private var clip: Clip? = null
     private var player: MediaPlayer? = null
     private var minutes: MinuteCounterView? = null
@@ -73,16 +77,40 @@ class MainActivity : Activity() {
         store = Recordings(this)
         store.recover()
         active = RecordingService.activeId != null
+        if (intent.getStringExtra(EXTRA_SCREEN) == "menu") screen = "menu"
         render()
+    }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.getStringExtra(EXTRA_SCREEN) == "menu") { releasePlayer(); screen = "menu"; render() }
     }
     override fun onResume() {
         super.onResume()
+        foreground = true; floatingMenu?.resume()
         motionAllowed = android.animation.ValueAnimator.areAnimatorsEnabled() && !getSystemService(PowerManager::class.java).isPowerSaveMode
         minutes?.setFloating(motionAllowed && !RecordingService.paused && minutes?.visibility == View.VISIBLE)
         handler.post(ticker)
     }
-    override fun onPause() { handler.removeCallbacks(ticker); minutes?.setFloating(false); player?.pause(); super.onPause() }
-    override fun onDestroy() { releasePlayer(); storageWorker.shutdown(); super.onDestroy() }
+    override fun onPause() { foreground = false; floatingMenu?.pause(); handler.removeCallbacks(ticker); minutes?.setFloating(false); player?.pause(); super.onPause() }
+    override fun onDestroy() { floatingMenu?.dispose(); releasePlayer(); storageWorker.shutdown(); super.onDestroy() }
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        val handled = super.dispatchTouchEvent(event)
+        floatingMenu?.onTouch(event.actionMasked)
+        return handled
+    }
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        val handled = super.dispatchKeyEvent(event)
+        if (event.action == android.view.KeyEvent.ACTION_DOWN && event.keyCode in listOf(
+                android.view.KeyEvent.KEYCODE_DPAD_UP, android.view.KeyEvent.KEYCODE_DPAD_DOWN,
+                android.view.KeyEvent.KEYCODE_DPAD_LEFT, android.view.KeyEvent.KEYCODE_DPAD_RIGHT,
+                android.view.KeyEvent.KEYCODE_DPAD_CENTER, android.view.KeyEvent.KEYCODE_TAB)) floatingMenu?.interact()
+        return handled
+    }
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        val handled = super.dispatchGenericMotionEvent(event)
+        if (event.action == MotionEvent.ACTION_SCROLL) floatingMenu?.interact()
+        return handled
+    }
     private fun dp(value: Int) = (value * resources.displayMetrics.density).roundToInt()
     private fun background(color: Int, radius: Float = 28f) = GradientDrawable().apply { setColor(color); cornerRadius = dp(radius.toInt()).toFloat() }
     private fun text(value: String, size: Float, color: Int = Color.WHITE): TextView {
@@ -108,6 +136,8 @@ class MainActivity : Activity() {
         }
     }
     private fun render() {
+        val menuWasVisible = floatingMenu?.button?.visibility == View.VISIBLE
+        floatingMenu?.dispose(); floatingMenu = null
         minutes?.setFloating(false)
         minutes = null; status = null; pause = null; play = null; seek = null; limitPicker = null
         storageRequest++; storageChart = null; storageAvailable = null; storageApp = null
@@ -118,10 +148,17 @@ class MainActivity : Activity() {
         body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
             val round = resources.configuration.isScreenRound
-            setPadding(dp(if (round) 30 else 20), dp(16), dp(if (round) 30 else 20), dp(20))
+            setPadding(dp(if (round) 30 else 28), dp(if (screen == "home") 16 else 14), dp(if (round) 30 else 28), dp(24))
         }
         scroll.addView(body)
         layers.addView(scroll, FrameLayout.LayoutParams(-1, -1))
+        if (screen != "menu") {
+            val menuButton = WatchDesign.menuDock(this) { releasePlayer(); screen = "menu"; render() }
+            layers.addView(menuButton, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
+            floatingMenu = FloatingMenuController(menuButton).also {
+                if (foreground) { it.resume(); if (menuWasVisible) it.interact() }
+            }
+        }
         setContentView(layers)
         window.decorView.windowInsetsController?.hide(WindowInsets.Type.systemBars())
         window.decorView.windowInsetsController?.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -158,7 +195,7 @@ class MainActivity : Activity() {
             } else false
         }
         when {
-            screen == "settings" -> settings()
+            screen == "menu" -> menu()
             screen == "storage" -> storage()
             screen == "limits" -> limits()
             screen == "limit_minutes" -> limitMinutes()
@@ -212,13 +249,6 @@ class MainActivity : Activity() {
         // Saved total has no running seconds; the sweep starts when capture starts.
         dial.elapsed = 0
         button("●  Record", mint) { startRecording() }.contentDescription = "Start recording"
-        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val moments = button("Moments · ${clips.size}") { screen = "library"; render() }.apply { textSize = 11f }
-        val settings = button("Settings") { screen = "settings"; render() }.apply { textSize = 11f }
-        body.removeView(moments); body.removeView(settings)
-        row.addView(moments, LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginEnd = dp(3) })
-        row.addView(settings, LinearLayout.LayoutParams(dp(64), dp(44)).apply { marginStart = dp(3) })
-        body.addView(row, LinearLayout.LayoutParams(-1, dp(44)).apply { topMargin = dp(3) })
     }
     private fun recording() {
         status = text(if (RecordingService.paused) "PAUSED" else "●  RECORDING", 10f, mint)
@@ -235,20 +265,60 @@ class MainActivity : Activity() {
         row.addView(mark, LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginStart = dp(3) })
         body.addView(row)
         button("■  Save", mint) { command(RecordingService.SAVE) }
-        button("Settings") { screen = "settings"; render() }
     }
-    private fun settings() {
+    private fun menu() {
         updateDial(0)
-        text("SETTINGS", 10f, mint)
-        text("Make it yours.", 17f)
-        button("Storage") { screen = "storage"; render() }.apply { layoutParams.height = dp(56) }
-        button("Recording limit") { screen = "limits"; render() }.apply { layoutParams.height = dp(56) }
-        button("Backup") { startActivity(Intent(this, BackupActivity::class.java)) }.apply { layoutParams.height = dp(56) }
+        text("REMEMBER", 9f, mint).apply { letterSpacing = .16f }
+        text(getString(R.string.menu), 18f)
+        data class Destination(val label: String, val icon: WatchIcon, val target: String, val backup: Boolean = false)
+        val destinations = listOf(
+            Destination(getString(R.string.recorder), WatchIcon.RECORD, "home"),
+            Destination(getString(R.string.moments), WatchIcon.MOMENTS, "library"),
+            Destination(getString(R.string.storage), WatchIcon.STORAGE, "storage"),
+            Destination(getString(R.string.recording_limit), WatchIcon.LIMIT, "limits"),
+            Destination(getString(R.string.backup_backup), WatchIcon.BACKUP, "overview", true),
+            Destination(getString(R.string.backup_server), WatchIcon.SERVER, "server", true),
+            Destination(getString(R.string.backup_transfers), WatchIcon.TRANSFERS, "transfers", true),
+            Destination(getString(R.string.backup_server_recordings), WatchIcon.REMOTE, "remote", true),
+            Destination(getString(R.string.backup_automatic_backup), WatchIcon.AUTOMATIC, "automatic", true),
+            Destination(getString(R.string.backup_advanced), WatchIcon.ADVANCED, "advanced", true)
+        )
+        destinations.chunked(3).forEach { pair ->
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            pair.forEach { destination ->
+                val tile = WatchDesign.action(this, destination.label) {
+                    menuOffset = scroll.scrollY
+                    if (destination.backup) startActivity(Intent(this, BackupActivity::class.java).putExtra(BackupActivity.EXTRA_PAGE, destination.target))
+                    else { screen = destination.target; render() }
+                }.apply {
+                    background = WatchDesign.touch(this@MainActivity, Color.TRANSPARENT, 16)
+                    textSize = 9f; gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                    setPadding(dp(3), dp(4), dp(3), 0); maxLines = 2
+                    val colors = when (destination.icon) {
+                        WatchIcon.MOMENTS, WatchIcon.REMOTE -> Color.rgb(143, 204, 217)
+                        WatchIcon.SERVER, WatchIcon.ADVANCED -> Color.rgb(197, 190, 234)
+                        else -> mint
+                    }
+                    val icon = WatchGlyph(destination.icon, colors, true).apply { setBounds(0, 0, dp(44), dp(44)) }
+                    setCompoundDrawables(null, icon, null, null); compoundDrawablePadding = dp(4)
+                    contentDescription = destination.label
+                }
+                row.addView(tile, LinearLayout.LayoutParams(0, dp(84), 1f))
+            }
+            repeat(3 - pair.size) { row.addView(Space(this), LinearLayout.LayoutParams(0, dp(84), 1f)) }
+            body.addView(row, LinearLayout.LayoutParams(-1, -2))
+        }
         button(if (active) "Back to recording" else "Back") { screen = "home"; render() }
+        scroll.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                scroll.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                scroll.scrollTo(0, menuOffset)
+            }
+        })
     }
     private fun storage() {
         updateDial(0)
-        body.setPadding(dp(12), dp(8), dp(12), dp(20))
+        body.setPadding(dp(12), dp(8), dp(12), dp(24))
         text("STORAGE", 10f, mint)
         storageChart = StorageChartView(this).also {
             // Center a large chart in the initial viewport; details and actions follow below it.
@@ -258,7 +328,7 @@ class MainActivity : Activity() {
         storageAvailable = text("● Available · …", 11f, mint)
         storageApp = text("● Remember · …", 11f)
         button("Refresh") { loadStorage() }
-        button("Back") { screen = "settings"; render() }
+        button("Back") { screen = "menu"; render() }
         loadStorage()
     }
     private fun loadStorage() {
@@ -286,30 +356,30 @@ class MainActivity : Activity() {
     private fun limits() {
         updateDial(0)
         val limit = preferences.read()
-        text("RECORDING LIMIT", 10f, mint)
-        val toggle = Switch(this).apply {
+        WatchDesign.heading(body, getString(R.string.your_pace), getString(R.string.recording_limit))
+        val face = StatusDialView(this).apply {
+            update(if (limit.enabled) limit.minutes.toString() else "∞", if (limit.enabled) "minutes / clip" else "unlimited", if (limit.enabled) 1f else 0f)
+        }
+        body.addView(face, LinearLayout.LayoutParams(-1, dp(116)))
+        Switch(this).apply {
             text = "Minute limit"; textSize = 12f; setTextColor(Color.WHITE)
             isChecked = limit.enabled
-            thumbTintList = android.content.res.ColorStateList(
-                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                intArrayOf(mint, Color.rgb(116, 129, 96))
-            )
-            setPadding(dp(5), 0, dp(5), 0)
-            body.addView(this, LinearLayout.LayoutParams(-1, dp(44)))
+            thumbTintList = WatchDesign.switchTint()
+            background = WatchDesign.shape(this@MainActivity)
+            setPadding(dp(12), 0, dp(12), 0)
+            body.addView(this, LinearLayout.LayoutParams(-1, dp(48)))
             setOnCheckedChangeListener { _, checked -> preferences.write(preferences.read().copy(enabled = checked)); render() }
         }
-        text(if (toggle.isChecked) "Enabled" else "Unlimited recording", 10f, muted)
         button("Length · ${limit.minutes} min") { screen = "limit_minutes"; render() }
-        button("At the limit\n${if (limit.action == LimitAction.STOP) "Save & stop" else "Save & start next"}") {
+        WatchDesign.card(body, "At the limit", if (limit.action == LimitAction.STOP) "Save & stop" else "Save & start next", WatchIcon.LIMIT) {
             screen = "limit_action"; render()
-        }.apply { layoutParams.height = dp(54); textSize = 11f }
-        text("Applies to your next recording session.\nPaused time doesn't count.", 10f, muted)
-        button("Back") { screen = "settings"; render() }
+        }
+        text("Applies to your next session.\nPaused time doesn't count.", 10f, muted)
+        button("Back") { screen = "menu"; render() }
     }
     private fun limitMinutes() {
         updateDial(0)
-        text("CLIP LENGTH", 10f, mint)
-        text("Minutes", 13f)
+        WatchDesign.heading(body, "Minutes", "Clip length")
         limitPicker = NumberPicker(this).apply {
             minValue = 1; maxValue = 1440; value = preferences.read().minutes; wrapSelectorWheel = false
             contentDescription = "Recording limit in minutes"
@@ -325,7 +395,7 @@ class MainActivity : Activity() {
     }
     private fun limitAction() {
         updateDial(0)
-        text("AT THE LIMIT", 10f, mint)
+        WatchDesign.heading(body, "At the limit", "Recording limit")
         val action = preferences.read().action
         button("${if (action == LimitAction.STOP) "✓ " else ""}Save & stop", if (action == LimitAction.STOP) mint else Color.rgb(43, 52, 32)) {
             preferences.write(preferences.read().copy(action = LimitAction.STOP)); render()
@@ -338,7 +408,7 @@ class MainActivity : Activity() {
     }
     private fun library() {
         updateDial(0)
-        text("YOUR MOMENTS", 10f, mint)
+        WatchDesign.heading(body, getString(R.string.moments), getString(R.string.on_your_wrist))
         val clips = store.list()
         if (clips.isEmpty()) {
             text("A little space\nfor big ideas.", 20f)
@@ -347,16 +417,13 @@ class MainActivity : Activity() {
         } else {
             text("${clips.size} saved", 12f, muted)
             clips.forEach { item ->
-                button("${item.title}\n${SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(item.created))}  ·  ${timeLabel(item.duration)}") {
+                WatchDesign.card(body, item.title,
+                    "${SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(item.created))}  ·  ${timeLabel(item.duration)}", WatchIcon.PLAY) {
                     clip = item; screen = "detail"; render()
-                }.apply {
-                    textSize = 11f
-                    layoutParams.height = dp(54)
-                    maxLines = 2
                 }
             }
         }
-        button("Back") { screen = "home"; render() }
+        button("Back") { screen = "menu"; render() }
     }
     private fun detail() {
         val item = clip ?: run { screen = "library"; render(); return }
@@ -454,7 +521,7 @@ class MainActivity : Activity() {
             releasePlayer()
             screen = when (screen) {
                 "detail" -> "library"
-                "storage", "limits" -> "settings"
+                "storage", "limits", "library" -> "menu"
                 "limit_minutes", "limit_action" -> "limits"
                 else -> "home"
             }

@@ -8,7 +8,9 @@ Screenshots from a Wear OS round-screen emulator:
 
 <p>
   <img src="docs/home.png" width="240" alt="Remember home screen with a floating minute number and recording controls" />
-  <img src="docs/settings.png" width="240" alt="Settings with Storage and Recording limit sections" />
+  <img src="docs/home-menu-visible.png" width="240" alt="Home with the bottom-center menu icon revealed by touch" />
+  <img src="docs/menu.png" width="240" alt="Single menu with a grid of icons for every section" />
+  <img src="docs/recording-limit.png" width="240" alt="Recording limit dial showing unlimited recording" />
   <img src="docs/storage.png" width="240" alt="Large storage ring showing free space and total device capacity" />
 </p>
 
@@ -19,6 +21,7 @@ Screenshots from a Wear OS round-screen emulator:
 - Recording continues in a microphone foreground service when the screen turns off or you leave the app.
 - Floating rounded numerals show captured minutes; the background sweep shows seconds within the current minute.
 - A live microphone edge meter and an interactive bookmark/playback edge.
+- One shared icon grid opens every section directly, with a fixed Menu shortcut and rotary scrolling.
 - Device and app storage monitoring with a large proportional chart.
 - Optional SFTP backups to your own server, a transfer queue, scheduled uploads, and remote playback.
 - Optional minute limits: save and stop, or save each clip and start the next at zero.
@@ -103,9 +106,11 @@ The pairing and connection ports are different. Read each from the watch's Wirel
 
 Audio is stored as mono AAC in M4A files at 44.1 kHz / 128 kbps, approximately 1 MB per minute. The large numeral shows whole minutes in the current recording or playback, and total saved minutes on the home screen. Floating motion stops while capture is paused, the app is in the background, animations are disabled, or battery saver is active.
 
-## Settings
+## Menu and preferences
 
-Open **Settings** beside Moments. During capture, scroll below Save to reach it; recording continues while you browse.
+Open the transparent four-dot **Menu** icon at the bottom center of the home or recording screen. A three-column icon grid opens Recorder, Moments, Storage, Recording limit, Backup, Server, Transfers, Server recordings, Automatic backup, and Advanced directly. Scroll or use rotary input for the lower rows. The transparent Menu shortcut floats over full-screen pages without a reserved footer bar. Touch the screen to reveal it; it hides after three seconds without interaction. Rotary input also reveals it. It stays visible for touch exploration and keyboard focus, and respects the system accessibility timeout. Returning preserves your grid position. Back returns to the grid, or to the parent page for a clip, picker, or approval step. Recording continues while you browse.
+
+The library uses recording cards, Backup shows a completion dial, Recording limit shows the configured minutes or an unlimited dial, and Automatic backup shows its interval and whether checks are off. Interval, retry, and timeout choices use inline selected chips. Setup forms and actions remain scrollable.
 
 ### Storage
 
@@ -121,17 +126,18 @@ Under **At the limit**, choose **Save & stop** to end the recording, or **Save &
 
 ## Backup
 
-Open **Settings → Backup**. Dedicated pages keep setup, transfer status, remote listening, and scheduling separate.
+Open **Menu → Backup** for the dashboard. **Server**, **Transfers**, **Server recordings**, **Automatic backup**, and **Advanced** are independent tiles in the same menu.
 
 <p>
   <img src="docs/backup-overview.png" width="240" alt="Backup overview with backed-up and waiting counts and Back up now" />
   <img src="docs/backup-trust.png" width="240" alt="Server approval with Trust server and Cancel buttons, without fingerprint typing" />
   <img src="docs/backup-server.png" width="240" alt="Server settings with address, port, and username fields" />
-  <img src="docs/backup-automatic.png" width="240" alt="Automatic backup disabled, with charging and unmetered preferences enabled" />
+  <img src="docs/backup-automatic.png" width="240" alt="Automatic backup interval dial showing that background checks are off" />
+  <img src="docs/advanced.png" width="240" alt="Inline selected chips for retry attempts and connection timeout" />
 </p>
 
 - **Server:** configure address, port, username, and an existing absolute backup folder. **Connect & trust** fetches the fingerprint without typing; approve the server once to remember it. Create the watch key, export or copy its public key, and authorize it on your server. Test connection before uploading. See [server setup](docs/backup.md).
-- **Transfers:** shows saved recordings and their status. **Back up / Retry** queues unfinished or changed recordings. **Pause all backups** cancels transfers and turns automatic backup off. Local recordings are never deleted by backup; local deletion does not delete server copies.
+- **Transfers:** shows saved recordings and their status. **Back up / Retry** queues unfinished or changed recordings. **Pause all** cancels transfers and turns automatic backup off. Local recordings are never deleted by backup; local deletion does not delete server copies.
 - **Server recordings:** Refresh lists completed Remember backups (up to 1,000 per folder). Select a recording to download a verified temporary copy and play it with seeking and bookmark buttons. This is cached playback, not live streaming; sufficient watch storage is required. Leaving the activity pauses playback.
 - **Automatic backup:** opt in to checks every hour, every six hours, or daily. Charging and unmetered connections are required by default and can be changed. Unmetered does not necessarily mean Wi-Fi. Android schedules work when conditions allow, rather than at an exact clock time; jobs persist across reboot.
 - **Advanced:** choose 1/3/5 retry attempts, a 20/40/60-second connection timeout, or clear the playback cache. Server identity shows the remembered fingerprint; Forget trust pauses backups and allows a verified server-key change to be approved again.
@@ -154,7 +160,7 @@ Device tests require a **disposable** emulator with a microphone. They create au
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
-Coverage includes backup destination validation, encrypted watch-key persistence, backup-page navigation, manifest safety, and (with an opt-in disposable SFTP fixture) resumable transfers, checksum verification, host-key rejection, actual scheduled uploads, scheduling constraints, and cached remote playback/background pause. Network fixture instructions are in [docs/backup.md](docs/backup.md). Coverage also includes duration formatting, limit boundaries, pause exclusion, real one-minute automatic stop and split rollover, playable file output, bookmarks, settings persistence/navigation, storage accounting, and clip rename/delete behavior.
+Coverage includes backup destination validation, encrypted watch-key persistence, the shared menu, direct section navigation and back behavior, backup-page navigation, manifest safety, and (with an opt-in disposable SFTP fixture) resumable transfers, checksum verification, host-key rejection, actual scheduled uploads, scheduling constraints, and cached remote playback/background pause. Network fixture instructions are in [docs/backup.md](docs/backup.md). Coverage also includes duration formatting, limit boundaries, pause exclusion, real one-minute automatic stop and split rollover, playable file output, bookmarks, settings persistence/navigation, storage accounting, and clip rename/delete behavior.
 
 [Android checks](.github/workflows/android.yml) runs on pushes, pull requests, and manual dispatch. It verifies the wrapper, builds the debug app, runs lint and unit tests, and compiles device tests. It uploads check reports and a debug APK with a 14-day retention period. Device tests are run locally; the workflow does not claim to run them. The workflow uses pinned action commits and read-only repository permissions. Its first hosted run will happen after the repository is pushed to GitHub.
 

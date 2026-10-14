@@ -12,8 +12,8 @@ Remember needs an existing SSH server with SFTP enabled. No database or custom a
    ssh-keygen -lf /etc/ssh/ssh_host_ecdsa_key.pub -E sha256
    ```
 
-   Compare the `SHA256:...` value with the watch's read-only display if desired. Subsequent fingerprint mismatches block authentication and transfers. For a legitimate server-key change, verify it first, then use **Backup → Advanced → Server identity → Forget trust** and approve the new identity. Forgetting trust pauses backups and turns automatic backup off.
-4. In Remember, open **Settings → Backup → Server**, then **Create watch key**. Export or copy the public key and add its single line to the dedicated account's `~/.ssh/authorized_keys`. Keep normal OpenSSH ownership and permissions: the account owns `.ssh` and its files, `.ssh` is mode 700, and `authorized_keys` is mode 600.
+   Compare the `SHA256:...` value with the watch's read-only display if desired. Subsequent fingerprint mismatches block authentication and transfers. For a legitimate server-key change, verify it first, then use **Menu → Advanced → Server identity → Forget trust** and approve the new identity. Forgetting trust pauses backups and turns automatic backup off.
+4. In Remember, open **Menu → Server**, then **Create watch key**. Export or copy the public key and add its single line to the dedicated account's `~/.ssh/authorized_keys`. Keep normal OpenSSH ownership and permissions: the account owns `.ssh` and its files, `.ssh` is mode 700, and `authorized_keys` is mode 600.
 5. Restrict the account to SFTP and its intended storage area using your server's supported configuration. For OpenSSH, a dedicated-user `Match` block can disable shell use and forwarding:
 
    ```text
