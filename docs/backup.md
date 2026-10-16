@@ -13,7 +13,7 @@ Remember needs an existing SSH server with SFTP enabled. No database or custom a
    ```
 
    Compare the `SHA256:...` value with the watch's read-only display if desired. Subsequent fingerprint mismatches block authentication and transfers. For a legitimate server-key change, verify it first, then use **Menu → Advanced → Server identity → Forget trust** and approve the new identity. Forgetting trust pauses backups and turns automatic backup off.
-4. In Remember, open **Menu → Server**, then **Create watch key**. Export or copy the public key and add its single line to the dedicated account's `~/.ssh/authorized_keys`. Keep normal OpenSSH ownership and permissions: the account owns `.ssh` and its files, `.ssh` is mode 700, and `authorized_keys` is mode 600.
+4. In Remember, open **Menu → Server**, then **Create watch key**. Choose **Show QR code** on the public-key page, scan it with your phone’s camera or QR scanner, and copy the text (scanner support varies). This works offline without a phone companion app. **Copy on watch** and **Export public key** remain available. Add the public key’s single line to the dedicated account's `~/.ssh/authorized_keys`. Keep normal OpenSSH ownership and permissions: the account owns `.ssh` and its files, `.ssh` is mode 700, and `authorized_keys` is mode 600.
 5. Restrict the account to SFTP and its intended storage area using your server's supported configuration. For OpenSSH, a dedicated-user `Match` block can disable shell use and forwarding:
 
    ```text
@@ -31,6 +31,10 @@ Remember needs an existing SSH server with SFTP enabled. No database or custom a
 Enter the address without `ssh://`, SSH port, account name, and an **existing absolute folder path** as seen by that SFTP account. Remember does not create the root backup folder. Choose **Connect & trust**, review the server identity, and tap **Trust server**. The app saves the fingerprint automatically. Cancel leaves the server untrusted; discovery sends no watch credentials. If a previously trusted server presents a different key, it is blocked. **Save server** can store an untrusted draft, but uploads remain disabled until approval. The watch public key must be authorized before **Test connection** can succeed.
 
 Choose **Back up now** to queue saved recordings. Automatic backup remains off until enabled on its dedicated page. Retry attempts and socket timeouts are adjustable under Advanced. Pausing all backups also disables automatic backup.
+
+<img src="public-key-qr.png" width="240" alt="Offline public-key QR code on a round Wear OS emulator using a disposable watch identity" />
+
+This screenshot contains a disposable test key. Scan the QR shown on your own watch when configuring your server.
 
 Password login and private-key import are not currently supported. The private watch key is encrypted locally using Android Keystore and cannot be exported through the UI. After uninstalling or changing watches, authorize a newly generated public key on the server.
 

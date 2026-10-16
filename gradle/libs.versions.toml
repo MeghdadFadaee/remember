@@ -9,8 +9,10 @@ wearTiles = "1.6.2"
 protoLayout = "1.4.2"
 concurrentFutures = "1.3.0"
 annotationExperimental = "1.6.0"
+zxing = "3.5.4"
 
 [libraries]
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 androidx-annotation-experimental = { group = "androidx.annotation", name = "annotation-experimental", version.ref = "annotationExperimental" }
 wear-tiles = { group = "androidx.wear.tiles", name = "tiles", version.ref = "wearTiles" }
 wear-protolayout = { group = "androidx.wear.protolayout", name = "protolayout", version.ref = "protoLayout" }

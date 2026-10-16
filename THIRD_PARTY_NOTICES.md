@@ -16,6 +16,10 @@ The app includes [mwiede/JSch 2.28.8](https://github.com/mwiede/jsch/tree/jsch-2
 
 [Bouncy Castle bcprov-jdk18on 1.86](https://www.bouncycastle.org/) provides Android-compatible Ed25519 key generation and signatures through JSch's BC backend. It is distributed under the Bouncy Castle license (MIT-style), retained in [licenses/Bouncy-Castle.txt](licenses/Bouncy-Castle.txt) and bundled in the app's license assets. Android's installed security providers are not replaced.
 
+## ZXing QR encoding
+
+[ZXing Core 3.5.4](https://github.com/zxing/zxing/tree/zxing-3.5.4) generates public-key QR codes locally. It is distributed under Apache License 2.0, retained in [licenses/Apache-2.0.txt](licenses/Apache-2.0.txt) and bundled in the app. The upstream [NOTICE](licenses/ZXing-NOTICE.txt) is retained in the repository and app license assets. Only the core library is included; no camera/scanner UI or online QR service is used.
+
 ## AndroidX Tiles and concurrency
 
 The recording tile uses AndroidX Wear Tiles 1.6.2, ProtoLayout/ProtoLayout Expression 1.4.2, Concurrent Futures 1.3.0, and Annotation Experimental 1.6.0 (API opt-in markers for native tile transitions), distributed under the Apache License, Version 2.0. The transitive Guava `listenablefuture` API is also Apache-2.0 licensed. A copy of the license is retained in [licenses/Apache-2.0.txt](licenses/Apache-2.0.txt) and bundled in the app's license assets. These libraries and their notices retain their upstream licenses; they are not relicensed under MIT. The tile renderer dependency is used only in device tests.

@@ -1,4 +1,13 @@
 <resources>
+    <string name="backup_watch_public_key">Watch public key</string>
+    <string name="backup_public_key_instructions">Add this public key to your server’s authorized_keys.</string>
+    <string name="backup_show_qr">Show QR code</string>
+    <string name="backup_scan_with_phone">Scan with your phone</string>
+    <string name="backup_qr_instructions">Use your phone’s camera or QR scanner, then copy the text. Works offline.</string>
+    <string name="backup_public_key_qr_description">QR code containing the watch public key</string>
+    <string name="backup_copy_on_watch">Copy on watch</string>
+    <string name="backup_export_public_key">Export public key</string>
+    <string name="backup_public_key_qr_failed">Could not create the QR code. You can still copy or export the public key.</string>
     <string name="recorder_start">Start recording</string>
     <string name="recorder_recording_part">● RECORDING · %1$d</string>
     <string name="recorder_moment_marked">Moment marked</string>

@@ -44,6 +44,8 @@ class BackupActivity : Activity() {
     private var remoteClips: List<RemoteClip> = emptyList()
     private var serverDraft: BackupServer? = null
     private var pendingTrust: BackupServer? = null
+    private var displayedPublicKey: String? = null
+    private var publicKeyQr: com.google.zxing.common.BitMatrix? = null
     private var summary: TextView? = null
     private var progress: TextView? = null
     private var playbackButton: Button? = null
@@ -146,6 +148,8 @@ class BackupActivity : Activity() {
         }
         when (page) {
             "server" -> serverPage()
+            "public_key" -> publicKeyPage()
+            "public_key_qr" -> publicKeyQrPage()
             "trust" -> trustPage()
             "trust_fingerprint" -> {
                 title(getString(R.string.backup_server_identity))
@@ -157,7 +161,7 @@ class BackupActivity : Activity() {
             "playback" -> playbackPage()
             "automatic" -> automaticPage()
             "advanced" -> advancedPage()
-            "licenses" -> { title(getString(R.string.backup_open_source_licenses)); text(listOf("JSch.txt", "Bouncy-Castle.txt").joinToString("\n\n") { name -> assets.open("licenses/$name").bufferedReader().use { it.readText() } }, 10f, muted); button(getString(R.string.backup_back)) { navigate("advanced") } }
+            "licenses" -> { title(getString(R.string.backup_open_source_licenses)); text(listOf("JSch.txt", "Bouncy-Castle.txt", "Apache-2.0.txt", "ZXing-NOTICE.txt").joinToString("\n\n") { name -> assets.open("licenses/$name").bufferedReader().use { it.readText() } }, 10f, muted); button(getString(R.string.backup_back)) { navigate("advanced") } }
             else -> overview()
         }
         scroll.requestFocus()
@@ -249,6 +253,7 @@ class BackupActivity : Activity() {
         text("02  /  WATCH IDENTITY", 9f, lime)
         button(if (settings.publicKey() == null) "Create watch key" else "Show watch key") {
             runTask("Preparing key…", { settings.generateKey() }) { key ->
+                serverDraft = draft()
                 showPublicKey(key)
             }
         }
@@ -295,15 +300,43 @@ class BackupActivity : Activity() {
         button(getString(R.string.backup_view_fingerprint)) { navigate("trust_fingerprint") }
     }
     private fun showPublicKey(key: String) {
-        AlertDialog.Builder(this).setTitle("Watch public key").setMessage("Add this public key to the backup account's authorized_keys:\n\n$key")
-            .setPositiveButton("Export") { _, _ ->
-                runCatching {
-                    startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
-                        .setType("text/plain").putExtra(Intent.EXTRA_TITLE, "remember-watch.pub"), 20)
-                }.onFailure { toast("No file picker available. Copy the public key instead.") }
-            }.setNeutralButton("Copy") { _, _ ->
-                getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Watch public key", key)); toast(getString(R.string.backup_public_key_copied))
-            }.setNegativeButton("Close", null).show()
+        displayedPublicKey = key.trim()
+        publicKeyQr = null
+        navigate("public_key")
+    }
+    private fun publicKeyPage() {
+        val key = displayedPublicKey ?: settings.publicKey()?.trim()
+        if (key == null) { page = "server"; serverPage(); return }
+        displayedPublicKey = key
+        title(getString(R.string.backup_watch_public_key))
+        primary(getString(R.string.backup_show_qr)) {
+            runTask(getString(R.string.backup_show_qr), { runCatching { PublicKeyQr.encode(key) } }) { result ->
+                if (page == "public_key" && displayedPublicKey == key) result.onSuccess { code ->
+                    publicKeyQr = code; navigate("public_key_qr")
+                }.onFailure { toast(getString(R.string.backup_public_key_qr_failed)) }
+            }
+        }
+        text(getString(R.string.backup_public_key_instructions), 11f, muted)
+        button(getString(R.string.backup_copy_on_watch)) {
+            getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText(getString(R.string.backup_watch_public_key), key))
+            toast(getString(R.string.backup_public_key_copied))
+        }
+        button(getString(R.string.backup_export_public_key)) {
+            runCatching {
+                startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("text/plain").putExtra(Intent.EXTRA_TITLE, "remember-watch.pub"), 20)
+            }.onFailure { toast(getString(R.string.backup_could_not_export_key)) }
+        }
+        text(key, 10f, muted).setTextIsSelectable(true)
+        button(getString(R.string.backup_back)) { back() }
+    }
+    private fun publicKeyQrPage() {
+        val code = publicKeyQr ?: run { page = "public_key"; publicKeyPage(); return }
+        text(getString(R.string.backup_scan_with_phone), 10f, lime)
+        val side = dp((resources.configuration.screenWidthDp * .62f).toInt())
+        body.addView(PublicKeyQrView(this, code), LinearLayout.LayoutParams(side, side))
+        text(getString(R.string.backup_qr_instructions), 10f, muted)
+        button(getString(R.string.backup_back)) { back() }
     }
     @Deprecated("Framework document picker result")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -516,6 +549,8 @@ class BackupActivity : Activity() {
             }
             "trust" -> cancelTrust()
             "trust_fingerprint" -> navigate("trust")
+            "public_key_qr" -> navigate("public_key")
+            "public_key" -> navigate("server")
             else -> navigate(when (page) { "playback" -> "remote"; "licenses" -> "advanced"; else -> "overview" })
         }
     }
