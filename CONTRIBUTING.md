@@ -29,3 +29,7 @@ Recording-service changes also need the device tests. Use a disposable emulator:
 - Do not introduce app accounts, additional network services, or analytics without discussing the change first.
 
 Do not include local IDE/device configuration, credentials, signing keys, build output, or personal audio in a pull request. Avoid attaching private recordings or identifying information to issues. Contributions are covered by the repository's [MIT license](LICENSE).
+
+## Optional desktop CLI
+
+The Python package in `tools/remember_cli` is independent of the watch APK. With Python 3.10+, use an isolated environment, install with `python -m pip install -e . build`, and run `python -m unittest discover -s tests/cli -v`. The network tests start only the included loopback SFTP fixture with temporary files and generated keys. Never point tests at personal backup servers. Build distributables with `python -m build`. CLI-only changes do not require an Android rebuild; preserve the watch manifest schema, SHA-256 checks, SSH host verification, bounded transfers, non-destructive sync, and confirmation/trash behavior. Read [docs/cli.md](docs/cli.md) before changing mutations or partial-transfer recovery.

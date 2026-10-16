@@ -30,4 +30,4 @@ Android APIs, Kotlin runtime libraries, the Android Gradle Plugin, and test libr
 
 The app uses Android's installed system fonts. No Samsung font, watch-face asset, or wallpaper is bundled. The Spatial Number appearance is referenced as design inspiration; the numeral paths and other app artwork are drawn in project code. Screenshots in `docs/` show the app running in an emulator.
 
-The optional Python SFTP test fixture uses separately installed Paramiko and cryptography packages under their upstream licenses. These development-only packages are not bundled in the Android app.
+The optional Python backup CLI and SFTP test fixture use separately installed [Paramiko 5.x](https://pypi.org/project/paramiko/5.0.0/) (LGPL-2.1) and its dependencies, including cryptography, under their upstream licenses. These packages are installed by Python packaging tools, not vendored into this repository or bundled in the Android app. The CLI's original source is MIT; this does not relicense its dependencies.

@@ -13,6 +13,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  cli:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install isolated CLI and build tools
+        run: |
+          python3 -m venv /tmp/remember-cli-ci
+          /tmp/remember-cli-ci/bin/python -m pip install 'setuptools>=77' build .
+
+      - name: Test CLI and disposable loopback SFTP integration
+        run: /tmp/remember-cli-ci/bin/python -m unittest discover -s tests/cli -v
+
+      - name: Build and smoke-test CLI distributions
+        run: |
+          /tmp/remember-cli-ci/bin/python -m build --no-isolation
+          /tmp/remember-cli-ci/bin/python -m pip install --force-reinstall --no-deps dist/*.whl
+          /tmp/remember-cli-ci/bin/remember --help
+
+      - name: Upload CLI distributions
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: remember-backup-cli
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+
   verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 25

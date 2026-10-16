@@ -46,7 +46,9 @@ Verification requires downloading the uploaded audio once, so account for both d
 
 Server recordings downloads a selected file into a single temporary playback cache and verifies its checksum before playback. At least the full recording size plus 16 MB free space is required. The browser loads up to 1,000 manifests per folder. Files created by other applications or unsupported/corrupt manifests are ignored.
 
-SSH protects transfers but does not encrypt the audio and metadata stored on the server. Restore into the local library, client-side backup encryption, remote deletion, bandwidth limits, and exact-clock-time scheduling are future work.
+SSH protects transfers but does not encrypt the audio and metadata stored on the server. Restore into the watch's local library, client-side backup encryption, remote deletion from the watch, bandwidth limits, and exact-clock-time scheduling are future work.
+
+For desktop backup management, use the separate [Remember CLI](cli.md). It accepts `user@host:/backup/root` directly, lists/searches recordings, shows bookmarks, verifies/downloads audio, and supports explicit server-title edits and recoverable trash/restore/purge. Pause watch uploads while changing server files. CLI changes do not change the watch's local recordings or receipts, and a later watch re-upload can recreate files or replace a CLI-edited title.
 
 ## Testing
 

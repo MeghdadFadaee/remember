@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+"""Run from a checkout after `python3 -m pip install .`, or use the installed `remember` command."""
+import sys
+
+if sys.version_info < (3, 10):
+    sys.exit("Remember CLI requires Python 3.10 or newer.")
+try:
+    from remember_cli.cli import main
+except ModuleNotFoundError as error:
+    sys.exit(f"Missing CLI dependency ({error.name}). Install with: pipx install .  (or python3 -m pip install .)")
+
+raise SystemExit(main())

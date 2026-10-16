@@ -32,3 +32,10 @@ signing.properties
 *.wav
 *.mp3
 *.pending
+
+# Optional Python backup CLI
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/

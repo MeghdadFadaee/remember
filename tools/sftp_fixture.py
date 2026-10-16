@@ -117,7 +117,37 @@ def main():
 
             def rename(self, old, new):
                 try:
+                    if self.local(new).exists():
+                        raise FileExistsError(17, "Target exists")
                     self.local(old).rename(self.local(new))
+                    return paramiko.SFTP_OK
+                except OSError as error:
+                    return paramiko.SFTPServer.convert_errno(error.errno)
+
+            def posix_rename(self, old, new):
+                try:
+                    self.local(old).replace(self.local(new))
+                    return paramiko.SFTP_OK
+                except OSError as error:
+                    return paramiko.SFTPServer.convert_errno(error.errno)
+
+            def mkdir(self, path, attr):
+                try:
+                    self.local(path).mkdir(mode=0o700)
+                    return paramiko.SFTP_OK
+                except OSError as error:
+                    return paramiko.SFTPServer.convert_errno(error.errno)
+
+            def rmdir(self, path):
+                try:
+                    self.local(path).rmdir()
+                    return paramiko.SFTP_OK
+                except OSError as error:
+                    return paramiko.SFTPServer.convert_errno(error.errno)
+
+            def chattr(self, path, attr):
+                try:
+                    paramiko.SFTPServer.set_file_attr(self.local(path), attr)
                     return paramiko.SFTP_OK
                 except OSError as error:
                     return paramiko.SFTPServer.convert_errno(error.errno)

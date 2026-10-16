@@ -164,6 +164,20 @@ Uploads use one SFTP connection at a time and bounded buffers, without a databas
 
 The watch's private SSH key is encrypted using Android Keystore. SSH encrypts transport; audio and metadata on your server are **not encrypted at rest**. End-to-end encryption, exact-time scheduling, bandwidth caps, remote deletion, and restoration into the local library are not implemented. Automatic backup checks periodically for finished clips; saving a clip does not force an immediate upload. Interrupted jobs retain partial files for a later retry, subject to the configured retry limit.
 
+## Backup CLI
+
+The optional **`remember` CLI** works with backup folders over SFTP or on your computer, without a Remember config file or server software. Install it once with `pipx install .` (Python 3.10+), then pass the SSH destination and root directly:
+
+```sh
+remember ls backup@backup.example:/srv/remember --search meeting
+remember info backup@backup.example:/srv/remember latest
+remember sync backup@backup.example:/srv/remember ./recordings
+remember verify backup@backup.example:/srv/remember
+remember play backup@backup.example:/srv/remember latest
+```
+
+It supports bookmarks, JSON output, resumable verified downloads, incremental sync, title edits, recoverable server-side trash, restore, and explicit permanent purge. Host-key checks are required; your computer uses its own SSH key or agent. Sync never propagates remote deletions into local recordings. Pause watch uploads while changing server backups; those edits do not update watch-local titles or receipts. See the [CLI guide](docs/cli.md) for installation alternatives, every command, and safety/compatibility details. This is a separate desktop tool; Python is not added to the watch APK.
+
 ## Tests and automated checks
 
 Local checks:

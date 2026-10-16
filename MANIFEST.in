@@ -1,0 +1,3 @@
+include tools/remember tools/sftp_fixture.py
+include docs/backup.md THIRD_PARTY_NOTICES.md
+recursive-include tests/cli *.py
